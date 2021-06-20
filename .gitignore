@@ -1,0 +1,5 @@
+*~
+*.exe
+*.dbg
+*.pcap
+.gdb_history
