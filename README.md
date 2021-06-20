@@ -29,15 +29,19 @@ cd src
 ./test_printer.exe | tcpdump -r -
 ```
 
-## Capture packets from eth0 with optional filter and drop them on a ZMQ PUB bus
+## Capture packets from eth0 and drop them on a ZMQ PUB bus
 ```
 sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f icmp
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f igmp
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f udp
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f tcp
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f dns
+```
+
+## Use a BPF to exclude unwanted packets
+```
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f tcp
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
+sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
 ```
 
 ## Receive packets from ZMQ and print them into wireshark/tshark/tcpdump
