@@ -1,7 +1,7 @@
 [![Build Status](https://travis-ci.com/Fullaxx/pktstreamer.svg?branch=master)](https://travis-ci.com/Fullaxx/pktstreamer)
 
 # pktstreamer
-Stream filtered network packets using ZMQ
+Stream filtered network packets using ZeroMQ
 
 ## Requirements for building
 First we need to make sure we have all the appropriate libraries. \
