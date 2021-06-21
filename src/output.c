@@ -138,6 +138,8 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 
 	if(g_file_header_written == 0) {
 		// Only do this once
+		// Just in case init_output() never got called
+		if(!g_outstream) { g_outstream = stdout; }
 		print_file_header(fh_msg);
 		g_file_header_written = 1;
 	}
