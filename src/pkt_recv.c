@@ -3,7 +3,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
-#include <errno.h>
 
 #include "getopts.h"
 #include "async_zmq_sub.h"
@@ -21,16 +20,16 @@ char *g_filename = NULL;
 unsigned int g_stats = 0;
 unsigned int g_ns_ts = 0;
 
-unsigned int g_zmqpkt_count = 0;
-unsigned int g_zmqerr_count = 0;
+unsigned long g_zmqerr_count = 0;
+unsigned long g_zmqpkt_count = 0;
 
 static void alarm_handler(int signum)
 {
-	fprintf(stderr, "%u/%u\n", g_zmqerr_count, g_zmqpkt_count);
+	fprintf(stderr, "%lu/%lu\n", g_zmqerr_count, g_zmqpkt_count);
 	g_zmqpkt_count = g_zmqerr_count = 0;
 	(void) alarm(1);
 
-	if(fflush(stdout)) { perror(NULL); }
+	fflush(stderr);
 }
 
 static void sig_handler(int signum)

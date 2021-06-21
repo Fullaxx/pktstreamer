@@ -13,8 +13,8 @@ unsigned int g_magic = 0;
 
 // Externals found in pkt_recv.c
 extern unsigned int g_shutdown;
-extern unsigned int g_zmqpkt_count;
-extern unsigned int g_zmqerr_count;
+extern unsigned long g_zmqerr_count;
+extern unsigned long g_zmqpkt_count;
 extern unsigned int g_ns_ts;
 
 static void print_file_header(zmq_mf_t *fh_msg)

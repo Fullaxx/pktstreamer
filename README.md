@@ -53,6 +53,6 @@ sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
 
 ## Receive packets from ZMQ and save to pcap file
 ```
-./pkt_writer.exe -Z tcp://localhost:9999 >shiny_new.pcap
-./pkt_writer.exe -Z tcp://localhost:9999 -P shiny_new.pcap
+./pkt_writer.exe --stats -Z tcp://localhost:9999 >shiny_new.pcap
+./pkt_writer.exe --stats -Z tcp://localhost:9999 -P shiny_new.pcap
 ```
