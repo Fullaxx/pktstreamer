@@ -18,6 +18,7 @@ unsigned int g_shutdown = 0;
 char *g_zmqsockaddr = NULL;
 char *g_filename = NULL;
 unsigned int g_stats = 0;
+unsigned int g_us_ts = 0;
 unsigned int g_ns_ts = 0;
 
 unsigned long g_zmqerr_count = 0;
@@ -97,7 +98,8 @@ struct options opts[] = {
 	{ 1, "ZMQ",		"Set the ZMQ bus to listen on",		"Z",  1 },
 	{ 2, "PCAP",	"Write data to pcap file",			"P",  1 },
 	{ 3, "stats",	"Display stats on stderr", 			NULL, 0 },
-	{ 4, "ns",		"Nanosecond Precision Timestamps",	NULL, 0 },
+	{ 4, "us",		"Force Microsecond Timestamps",		NULL, 0 },
+	{ 5, "ns",		"Force Nanosecond Timestamps",		NULL, 0 },
 	{ 0, NULL,		NULL,								NULL, 0 }
 };
 
@@ -128,6 +130,9 @@ static void parse_args(int argc, char *argv[])
 				g_stats = 1;
 				break;
 			case 4:
+				g_us_ts = 1;
+				break;
+			case 5:
 				g_ns_ts = 1;
 				break;
 			default:
@@ -138,6 +143,11 @@ static void parse_args(int argc, char *argv[])
 
 	if(!g_zmqsockaddr) {
 		fprintf(stderr, "I need a ZMQ bus to listen to! (Fix with -Z)\n");
+		exit(EXIT_FAILURE);
+	}
+
+	if(g_us_ts && g_ns_ts) {
+		fprintf(stderr, "Cannot force us and ns timestamps!\n");
 		exit(EXIT_FAILURE);
 	}
 }

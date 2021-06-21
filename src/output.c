@@ -15,6 +15,7 @@ unsigned int g_magic = 0;
 extern unsigned int g_shutdown;
 extern unsigned long g_zmqerr_count;
 extern unsigned long g_zmqpkt_count;
+extern unsigned int g_us_ts;
 extern unsigned int g_ns_ts;
 
 static void print_file_header(zmq_mf_t *fh_msg)
@@ -32,7 +33,8 @@ static void print_file_header(zmq_mf_t *fh_msg)
 	if(!token) { g_zmqerr_count++; return; }
 	g_magic = strtoul(token, NULL, 10);
 
-	// Override the default and force nanosecond timestamps
+	// Override the default and convert timestamps
+	if(g_us_ts) { g_magic = 0xA1B2C3D4; }
 	if(g_ns_ts) { g_magic = 0xA1B23C4D; }
 
 	token = strtok_r(NULL, "/", &line_saveptr);
