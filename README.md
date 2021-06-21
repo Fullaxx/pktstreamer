@@ -22,42 +22,38 @@ cd src
 ./compile.sh
 ```
 
-## Directly print some test packets into wireshark/tshark/tcpdump
+## Directly print test packets into wireshark/tshark/tcpdump
 ```
 ./test_printer.exe | wireshark -k -i -
 ./test_printer.exe | tshark -r -
 ./test_printer.exe | tcpdump -r -
 ```
 
-## Capture packets from eth0 and drop them on a ZMQ PUB bus
+## Setup a ZMQ PUB bus to put packets on
+Use live2zmq.exe to capture packets from a network interface \
+Use pcap2zmq.exe to replay packets from a pcap file
 ```
-sudo ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999
+./pcap2zmq.exe -v 1 -P mypackets.pcap -Z tcp://*:9999
 ```
 
 ## Use a BPF to exclude unwanted packets
 ```
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f tcp
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
-sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f tcp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
 ```
 
-## Replay packets from pcap and drop them on a ZMQ PUB bus
-```
-./pcap2zmq.exe -v 1 -P mypackets.pcap -Z tcp://*:9999
-```
-
-## Receive packets from ZMQ and print them into wireshark/tshark/tcpdump
+## Subscribe to a packet stream
+Use zmq2stdout.exe to print packets into wireshark/tshark/tcpdump
+Use pkt_writer.exe to save packets to a pcap file
 ```
 ./zmq2stdout.exe -Z tcp://localhost:9999 | wireshark -k -i -
 ./zmq2stdout.exe -Z tcp://localhost:9999 | tshark -r -
 ./zmq2stdout.exe -Z tcp://localhost:9999 | tcpdump -r -
-```
-
-## Receive packets from ZMQ and save to pcap file
-```
 ./pkt_writer.exe --stats -Z tcp://localhost:9999 >shiny_new.pcap
 ./pkt_writer.exe --stats -Z tcp://localhost:9999 -P shiny_new.pcap
 ```

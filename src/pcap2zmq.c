@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <errno.h>
 #include <time.h>
 //#include <signal.h>
 #include <pcap.h>
@@ -22,7 +23,8 @@ int g_verbosity = 0;
 
 zmq_pub_t *g_pktpub = NULL;
 unsigned long g_pkt_id = 0;
-unsigned int g_magic = 0xA1B2C3D4;
+unsigned int g_magic = 0;
+int g_precision = -1;
 int g_linktype = 0;
 int g_pktdelay = 1;
 
@@ -120,12 +122,13 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	h = pcap_open_offline(g_pcap, &errbuf[0]);
+	h = pcap_open_offline_with_tstamp_precision(g_pcap, g_precision, &errbuf[0]);
 	if(!h) {
 		fprintf(stderr, "pcap_open_offline(%s) failed: %s\n", g_pcap, &errbuf[0]);
 		return 2;
 	}
 
+	// Get the linktype from the PCAP file
 	g_linktype = pcap_datalink(h);
 
 	// Give subscribers a chance to hook up before the packet flood
@@ -167,6 +170,36 @@ int main(int argc, char *argv[])
 	}
 
 	return 0;
+}
+
+// Why doesnt pcap_get_tstamp_precision(h) do this for me??
+static void determine_precision(void)
+{
+	size_t z;
+	FILE *f = fopen(g_pcap, "r");
+	if(!f) {
+		fprintf(stderr, "fopen(%s, r) failed: %s\n", g_pcap, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	z = fread(&g_magic, 1, sizeof(g_magic), f);
+	if(z != 4) {
+		fprintf(stderr, "fread(%s, 4) failed: %s\n", g_pcap, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+
+	if(g_magic == 0xA1B2C3D4) {
+		printf("%s has us timestamps\n", g_pcap);
+		g_precision = PCAP_TSTAMP_PRECISION_MICRO;
+	} else if(g_magic == 0xA1B23C4D) {
+		printf("%s has ns timestamps\n", g_pcap);
+		g_precision = PCAP_TSTAMP_PRECISION_NANO;
+	} else {
+		printf("%s has unknown timestamps!\n", g_pcap);
+		exit(EXIT_FAILURE);
+	}
+
+	fclose(f);
 }
 
 struct options opts[] = 
@@ -228,4 +261,6 @@ static void parse_args(int argc, char **argv)
 		fprintf(stderr, "I need a ZMQ bus to drop packets onto! (Fix with -Z)\n");
 		exit(EXIT_FAILURE);
 	}
+
+	determine_precision();
 }
