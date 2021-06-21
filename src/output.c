@@ -2,10 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 //#include <unistd.h>
+#include <errno.h>
 
 #include "async_zmq_sub.h"
 
 // Globals
+FILE *g_outstream = NULL;
 unsigned int g_file_header_written = 0;
 unsigned int g_magic = 0;
 
@@ -53,13 +55,13 @@ static void print_file_header(zmq_mf_t *fh_msg)
 	vers_major = 2;
 	vers_minor = 4;
 
-	err += fwrite(&g_magic,		4, 1, stdout);
-	err += fwrite(&vers_major,	2, 1, stdout);
-	err += fwrite(&vers_minor,	2, 1, stdout);
-	err += fwrite(&thiszone,	4, 1, stdout);
-	err += fwrite(&sigfigs,		4, 1, stdout);
-	err += fwrite(&snaplen,		4, 1, stdout);
-	err += fwrite(&linktype,	4, 1, stdout);
+	err += fwrite(&g_magic,		4, 1, g_outstream);
+	err += fwrite(&vers_major,	2, 1, g_outstream);
+	err += fwrite(&vers_minor,	2, 1, g_outstream);
+	err += fwrite(&thiszone,	4, 1, g_outstream);
+	err += fwrite(&sigfigs,		4, 1, g_outstream);
+	err += fwrite(&snaplen,		4, 1, g_outstream);
+	err += fwrite(&linktype,	4, 1, g_outstream);
 	if(err != 7) {
 		fprintf(stderr, "Error writing file header!\n");
 		g_shutdown = 1;
@@ -87,16 +89,16 @@ static void print_packet(zmq_mf_t *ts_msg, zmq_mf_t *pkt_msg)
 		if(g_magic == 0xA1B2C3D4) { frac /= 1000; }
 	}
 
-	err += fwrite(&sec,		4, 1, stdout);
-	err += fwrite(&frac,	4, 1, stdout);
-	err += fwrite(&caplen,	4, 1, stdout);
-	err += fwrite(&pktlen,	4, 1, stdout);
+	err += fwrite(&sec,		4, 1, g_outstream);
+	err += fwrite(&frac,	4, 1, g_outstream);
+	err += fwrite(&caplen,	4, 1, g_outstream);
+	err += fwrite(&pktlen,	4, 1, g_outstream);
 	if(err != 4) {
 		fprintf(stderr, "Error writing packet header!\n");
 		exit(1);
 	}
 
-	err = fwrite(pkt_msg->buf, pkt_msg->size, 1, stdout);
+	err = fwrite(pkt_msg->buf, pkt_msg->size, 1, g_outstream);
 	if(err != 1) {
 		fprintf(stderr, "Error writing packet data!\n");
 		exit(1);
@@ -141,6 +143,28 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 	}
 
 	print_packet(ts_msg, pkt_msg);
-	fflush(stdout);
+	fflush(g_outstream);
 	g_zmqpkt_count++;
+}
+
+// If we have a filename, open the file for writing PCAP data
+// else print packets to stdout
+int init_output(char *filename)
+{
+	if(filename) {
+		g_outstream = fopen(filename, "w");
+		if(!g_outstream) {
+			fprintf(stderr, "fopen(%s, w) fail: %s", filename, strerror(errno));
+			return 1;
+		}
+	} else {
+		g_outstream = stdout;
+	}
+
+	return 0;
+}
+
+void fini_output(void)
+{
+	fclose(g_outstream);
 }

@@ -11,10 +11,13 @@
 // Prototypes
 static void parse_args(int argc, char *argv[]);
 void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data);
+int init_output(char *filename);
+void fini_output(void);
 
 // Globals
 unsigned int g_shutdown = 0;
 char *g_zmqsockaddr = NULL;
+char *g_filename = NULL;
 unsigned int g_stats = 0;
 unsigned int g_ns_ts = 0;
 
@@ -53,6 +56,11 @@ int main(int argc, char *argv[])
 
 	parse_args(argc, argv);
 
+	// Initialize output stream
+	z = init_output(g_filename);
+	if(z) { exit(EXIT_FAILURE); }
+
+	// Initialize ZMQ SUB
 	sub = as_zmq_sub_create(g_zmqsockaddr, filter, pkt_cb, 0, NULL);
 	if(!sub) {
 		fprintf(stderr, "as_zmq_sub_create(%s) failed!\n", g_zmqsockaddr);
@@ -78,14 +86,19 @@ int main(int argc, char *argv[])
 	// Shutdown the ZMQ SUB bus
 	as_zmq_sub_destroy(sub);
 
+	// Close the PCAP file if opened
+	fini_output();
+
 	if(g_zmqsockaddr)	{ free(g_zmqsockaddr); }
+	if(g_filename)		{ free(g_filename); }
 	return 0;
 }
 
 struct options opts[] = {
 	{ 1, "ZMQ",		"Set the ZMQ bus to listen on",		"Z",  1 },
-	{ 2, "stats",	"Display stats on stderr", 			NULL, 0 },
-	{ 3, "ns",		"Nanosecond Precision Timestamps",	NULL, 0 },
+	{ 2, "PCAP",	"Write data to pcap file",			"P",  1 },
+	{ 3, "stats",	"Display stats on stderr", 			NULL, 0 },
+	{ 4, "ns",		"Nanosecond Precision Timestamps",	NULL, 0 },
 	{ 0, NULL,		NULL,								NULL, 0 }
 };
 
@@ -110,9 +123,12 @@ static void parse_args(int argc, char *argv[])
 				g_zmqsockaddr = strdup(args);
 				break;
 			case 2:
-				g_stats = 1;
+				g_filename = strdup(args);
 				break;
 			case 3:
+				g_stats = 1;
+				break;
+			case 4:
 				g_ns_ts = 1;
 				break;
 			default:
