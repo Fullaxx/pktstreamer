@@ -44,6 +44,11 @@ sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
 sudo ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
 ```
 
+## Replay packets from pcap and drop them on a ZMQ PUB bus
+```
+./pcap2zmq.exe -v 1 -P mypackets.pcap -Z tcp://*:9999
+```
+
 ## Receive packets from ZMQ and print them into wireshark/tshark/tcpdump
 ```
 ./zmq2stdout.exe -Z tcp://localhost:9999 | wireshark -k -i -

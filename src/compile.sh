@@ -18,6 +18,9 @@ gcc ${DBGCFLAGS} test_printer.c -o test_printer.dbg
 gcc ${OPTCFLAGS} live2zmq.c ${BAKAPIDIR}/{getopts,async_pcapture,async_zmq_pub}.c -lpthread -lpcap -lzmq -o live2zmq.exe
 gcc ${DBGCFLAGS} live2zmq.c ${BAKAPIDIR}/{getopts,async_pcapture,async_zmq_pub}.c -lpthread -lpcap -lzmq -o live2zmq.dbg
 
+gcc ${OPTCFLAGS} pcap2zmq.c ${BAKAPIDIR}/{getopts,async_zmq_pub}.c -lpthread -lpcap -lzmq -o pcap2zmq.exe
+gcc ${DBGCFLAGS} pcap2zmq.c ${BAKAPIDIR}/{getopts,async_zmq_pub}.c -lpthread -lpcap -lzmq -o pcap2zmq.dbg
+
 gcc ${OPTCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.exe
 gcc ${DBGCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.dbg
 
