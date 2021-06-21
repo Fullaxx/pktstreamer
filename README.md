@@ -48,7 +48,7 @@ Use pcap2zmq.exe to replay packets from a pcap file
 ```
 
 ## Subscribe to a packet stream
-Use zmq2stdout.exe to print packets into wireshark/tshark/tcpdump
+Use zmq2stdout.exe to print packets into wireshark/tshark/tcpdump \
 Use pkt_writer.exe to save packets to a pcap file
 ```
 ./zmq2stdout.exe -Z tcp://localhost:9999 | wireshark -k -i -
