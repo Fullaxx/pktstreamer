@@ -48,8 +48,9 @@ Use pcap2zmq.exe to replay packets from a pcap file
 ```
 
 ## Capturing packets on the ANY interface
-If you setup a capture on all interface, you must implement a filter that excluded the ZMQ stream itself.
-If you don't eveery ZMQ message will generate at least one packet, which will get captured by libpcap.
+You can use live2zmq to capture on the ANY interface by omitting the dev argument.
+In this case you must implement a filter that excludes the ZMQ stream itself.
+If you don't every ZMQ message will generate at least one packet, which will get captured by libpcap and then passed to ZMQ.
 This in turn will create a rift in the space-time continuum that will destroy all life on Earth.
 You have been warned.
 ```
