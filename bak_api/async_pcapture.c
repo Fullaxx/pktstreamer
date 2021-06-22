@@ -21,7 +21,7 @@
 #include <pthread.h>	// pthread_*()
 #include <sys/prctl.h>	// prctl()
 
-#ifdef NEEDFORSPEED
+#ifdef YIELDFORSPEED
 #include <sched.h>
 #endif
 
@@ -29,8 +29,8 @@
 
 static void inline idlehands(void)
 {
-#ifdef NEEDFORSPEED
-	if(sched_yield()) { perror(NULL); }
+#ifdef YIELDFORSPEED
+	sched_yield();
 #else
 	usleep(25);
 #endif
@@ -38,8 +38,8 @@ static void inline idlehands(void)
 
 void *pcap_thread_watch(void *param)
 {
-	acap_t *ac = (acap_t *)param;
 	int z = 0;
+	acap_t *ac = (acap_t *)param;
 
 	prctl(PR_SET_NAME, "async_pcapture", 0, 0, 0);
 
