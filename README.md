@@ -31,7 +31,8 @@ cd src
 
 ## Setup a ZMQ PUB bus to put packets on
 Use live2zmq.exe to capture packets from a network interface \
-Use pcap2zmq.exe to replay packets from a pcap file
+Use pcap2zmq.exe to replay packets from a pcap file \
+Any packets received will be published to ZMQ
 ```
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999
 ./pcap2zmq.exe -v 1 -P mypackets.pcap -Z tcp://*:9999
