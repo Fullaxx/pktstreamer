@@ -53,9 +53,8 @@ void *pcap_thread_watch(void *param)
 			fprintf(stderr, "pcap_dispatch(%s) error: %s", ac->dev, pcap_geterr(ac->h));
 			ac->dispatch_error = 1;
 			ac->do_close = 1;
-		} else if(z == 0) {
-			idlehands();
-		} //else { printf("pkts processed: %d\n", z); }
+		} else if(z == 0) { idlehands(); }
+		//else { printf("pkts processed: %d\n", z); }
 	}
 
 #ifdef DEBUG
