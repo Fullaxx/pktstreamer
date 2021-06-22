@@ -68,8 +68,9 @@ void *pcap_thread_watch(void *param)
 	return NULL;
 }
 
-int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int p, unsigned int max_pkts, void *cb, void *user_data)
+int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int promisc, int max_pkts, void *cb, void *user_data)
 {
+	int err;
 	pthread_t thr_id;
 	struct bpf_program fp;
 
@@ -79,13 +80,37 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int p, 
 	snprintf(ac->dev, sizeof(ac->dev), "%s", (dev ? dev : "ANY"));
 	ac->cb = cb;
 	ac->user_data = user_data;
-	ac->max_pkts = (max_pkts ? max_pkts : 100);
-	snaplen = (snaplen > 0 ? snaplen : 262144);
+	ac->max_pkts = ((max_pkts > 0) ? max_pkts : 100);
+	snaplen = ((snaplen > 0) ? snaplen : 262144);
 
-	ac->h = pcap_open_live(dev, snaplen, p, 10, ac->pcap_errbuf);
+	ac->h = pcap_create(dev, ac->pcap_errbuf);
 	if(ac->h == NULL) {
 		fprintf(stderr, "pcap_open_live(%s) failed: %s\n", ac->dev, ac->pcap_errbuf);
 		return -2;
+	}
+
+	err = pcap_set_snaplen(ac->h, snaplen);
+	if(err) {
+		fprintf(stderr, "pcap_set_snaplen(%s) failed: %d\n", ac->dev, err);
+		return -3;
+	}
+
+	err = pcap_set_promisc(ac->h, promisc);
+	if(err) {
+		fprintf(stderr, "pcap_set_promisc(%s) failed: %d\n", ac->dev, err);
+		return -4;
+	}
+
+	err = pcap_set_timeout(ac->h, 10);
+	if(err) {
+		fprintf(stderr, "pcap_set_timeout(%s) failed: %d\n", ac->dev, err);
+		return -5;
+	}
+
+	err = pcap_activate(ac->h);
+	if(err) {
+		fprintf(stderr, "pcap_activate(%s) failed: %d\n", ac->dev, err);
+		return -6;
 	}
 
 	ac->linktype = pcap_datalink(ac->h);
@@ -93,28 +118,28 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int p, 
 	if(filter) {
 		if(pcap_compile(ac->h, &fp, filter, 1, PCAP_NETMASK_UNKNOWN) == -1) {
 			fprintf(stderr, "pcap_compile(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -3;
+			return -7;
 		}
 
 		if(pcap_setfilter(ac->h, &fp) == -1) {
 			fprintf(stderr, "pcap_setfilter(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -4;
+			return -8;
 		}
 	}
 
 	if(pcap_setnonblock(ac->h, 1, ac->pcap_errbuf) == -1) {
 		fprintf(stderr, "pcap_setnonblock(%s) failed: %s\n", ac->dev, ac->pcap_errbuf);
-		return -5;
+		return -9;
 	}
 
 	if(pthread_create(&thr_id, NULL, &pcap_thread_watch, ac)) {
 		fprintf(stderr, "pthread_create() failed!\n");
-		return -6;
+		return -10;
 	}
 
 	if(pthread_detach(thr_id)) {
 		fprintf(stderr, "pthread_detach() failed!\n");
-		return -7;
+		return -11;
 	}
 
 	return 0;
@@ -124,13 +149,7 @@ void as_pcapture_stop(acap_t *ac)
 {
 	if(ac->h) {
 		ac->do_close = 1;
-	}
-}
-
-void as_pcapture_wait4close(acap_t *ac)
-{
-	if(ac->h && ac->do_close) {
 		while(!ac->closed) { usleep(1000); }
+		ac->h = NULL;
 	}
-	ac->h = NULL;
 }

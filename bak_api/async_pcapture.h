@@ -34,15 +34,14 @@ typedef struct async_capture_thread {
 	char pcap_errbuf[PCAP_ERRBUF_SIZE];
 	char dev[IFNAMSIZ+1];
 	int linktype;
-	unsigned int max_pkts;
+	int max_pkts;
 	int do_close;			//trigger to stop the capturing thread
 	int closed;				//trigger to let the main program know the thread has exited
 	int dispatch_error;		//this will be a trigger to tell the main that our thread had a problem and had to exit
 } acap_t;
 
-int as_pcapture_launch(acap_t *, char *, char *, int, int, unsigned int, void *, void *);
+int as_pcapture_launch(acap_t *, char *, char *, int, int, int, void *, void *);
 void as_pcapture_stop(acap_t *);
-void as_pcapture_wait4close(acap_t *);
 
 #ifdef __cplusplus
 }

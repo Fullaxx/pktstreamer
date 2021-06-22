@@ -126,7 +126,6 @@ int main(int argc, char *argv[])
 
 	if(g_verbosity == 1) { printf("\n"); }
 	as_pcapture_stop(&ac);
-	as_pcapture_wait4close(&ac);
 
 	// Shutdown the ZMQ PUB bus
 	if(g_pktpub) {
