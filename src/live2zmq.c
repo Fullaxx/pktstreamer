@@ -73,7 +73,9 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 
 	// Convert fractional seconds to nanoseconds
 	myts.tv_sec  = pcap_hdr->ts.tv_sec;
-	myts.tv_nsec = pcap_hdr->ts.tv_usec*1000;
+	if(g_magic == 0xA1B2C3D4) {
+		myts.tv_nsec = pcap_hdr->ts.tv_usec*1000;
+	}
 
 	g_pkt_id++;
 	publish_packet(ac, raw_pkt, pcap_hdr->caplen, &myts);
