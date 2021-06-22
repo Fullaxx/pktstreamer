@@ -47,13 +47,23 @@ Use pcap2zmq.exe to replay packets from a pcap file
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
 ```
 
-## Subscribe to a packet stream
-Use zmq2stdout.exe to print packets into wireshark/tshark/tcpdump \
-Use pkt_writer.exe to save packets to a pcap file
+## Capturing packets on the ANY interface
+If you setup a capture on all interface, you must implement a filter that excluded the ZMQ stream itself.
+If you don't eveery ZMQ message will generate at least one packet, which will get captured by libpcap.
+This in turn will create a rift in the space-time continuum that will destroy all life on Earth.
+You have been warned.
 ```
-./zmq2stdout.exe -Z tcp://localhost:9999 | wireshark -k -i -
-./zmq2stdout.exe -Z tcp://localhost:9999 | tshark -r -
-./zmq2stdout.exe -Z tcp://localhost:9999 | tcpdump -r -
+./live2zmq.exe -v 2 -Z tcp://*:9999 -f "not tcp port 9999"
+./pkt_writer.exe --stats -Z tcp://localhost:9999 | wireshark -k -i -
+```
+
+## Subscribe to a packet stream
+Use pkt_writer.exe to save packets to a pcap file \
+or to print packets into wireshark/tshark/tcpdump
+```
+./pkt_writer.exe -Z tcp://localhost:9999 | wireshark -k -i -
+./pkt_writer.exe -Z tcp://localhost:9999 | tshark -r -
+./pkt_writer.exe -Z tcp://localhost:9999 | tcpdump -r -
 ./pkt_writer.exe --stats -Z tcp://localhost:9999 >shiny_new.pcap
 ./pkt_writer.exe --stats -Z tcp://localhost:9999 -P shiny_new.pcap
 ```

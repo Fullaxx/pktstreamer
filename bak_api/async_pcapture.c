@@ -73,16 +73,16 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int p, 
 	pthread_t thr_id;
 	struct bpf_program fp;
 
-	if((!ac) || (!dev) || (!cb)) { return -1; }
+	if((!ac) || (!cb)) { return -1; }
 
 	memset(ac, 0, sizeof(acap_t));
-	strncpy(ac->dev, dev, IFNAMSIZ);
+	snprintf(ac->dev, sizeof(ac->dev), "%s", (dev ? dev : "ANY"));
 	ac->cb = cb;
 	ac->user_data = user_data;
 	ac->max_pkts = (max_pkts ? max_pkts : 100);
 	snaplen = (snaplen > 0 ? snaplen : 262144);
 
-	ac->h = pcap_open_live(ac->dev, snaplen, p, 10, ac->pcap_errbuf);
+	ac->h = pcap_open_live(dev, snaplen, p, 10, ac->pcap_errbuf);
 	if(ac->h == NULL) {
 		fprintf(stderr, "pcap_open_live(%s) failed: %s\n", ac->dev, ac->pcap_errbuf);
 		return -2;

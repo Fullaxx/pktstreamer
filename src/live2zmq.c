@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
-	printf("Opening %s ...\n", g_dev);
+	printf("Opening %s ...\n", (g_dev ? g_dev : "ANY"));
 	retval = as_pcapture_launch(&ac, g_dev, g_filter, snaplen, p, max_pkts, &recv_packet, NULL);
 	if(retval < 0) {
 		as_zmq_pub_destroy(g_pktpub);
@@ -189,13 +189,13 @@ static void parse_args(int argc, char **argv)
 		free(args);
 	}
 
-	if(!g_dev) {
-		fprintf(stderr, "I need a network device to sniff! (Fix with -i)\n");
+	if(!g_zmqsockaddr) {
+		fprintf(stderr, "I need a ZMQ bus to drop packets onto! (Fix with -Z)\n");
 		exit(EXIT_FAILURE);
 	}
 
-	if(!g_zmqsockaddr) {
-		fprintf(stderr, "I need a ZMQ bus to drop packets onto! (Fix with -Z)\n");
+	if(!g_dev && !g_filter) {
+		fprintf(stderr, "If you wish to capture on ALL interfaces, you MUST implement a proper filter! (Fix with -f)\n");
 		exit(EXIT_FAILURE);
 	}
 }
