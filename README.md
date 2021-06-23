@@ -63,9 +63,19 @@ You have been warned.
 Use pkt_writer.exe to save packets to a pcap file \
 or to print packets into wireshark/tshark/tcpdump
 ```
-./pkt_writer.exe -Z tcp://localhost:9999 | wireshark -k -i -
-./pkt_writer.exe -Z tcp://localhost:9999 | tshark -r -
-./pkt_writer.exe -Z tcp://localhost:9999 | tcpdump -r -
-./pkt_writer.exe --stats -Z tcp://localhost:9999 >shiny_new.pcap
-./pkt_writer.exe --stats -Z tcp://localhost:9999 -P shiny_new.pcap
+./pkt_writer.exe -Z tcp://localhost:9999         | wireshark -k -i -
+./pkt_writer.exe -Z tcp://localhost:9999         | tshark -r -
+./pkt_writer.exe -Z tcp://localhost:9999         | tcpdump -r -
+./pkt_writer.exe -Z tcp://localhost:9999 --stats >shiny_new.pcap
+./pkt_writer.exe -Z tcp://localhost:9999 --stats -P shiny_new.pcap
+```
+
+## Histogram Example
+Use ipp_hist to collect a histogram of IP Protocols seen
+```
+./ipp_hist.exe -Z tcp://localhost:9999
+./ipp_hist.exe -Z tcp://localhost:9999 --csv
+./ipp_hist.exe -Z tcp://localhost:9999 --all
+./ipp_hist.exe -Z tcp://localhost:9999 --all --csv
+./ipp_hist.exe -Z tcp://localhost:9999 --stats
 ```

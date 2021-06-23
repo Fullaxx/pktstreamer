@@ -24,4 +24,7 @@ gcc ${DBGCFLAGS} pcap2zmq.c ${BAKAPIDIR}/{getopts,async_zmq_pub}.c -lpthread -lp
 gcc ${OPTCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.exe
 gcc ${DBGCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.dbg
 
+gcc ${OPTCFLAGS} hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o ipp_hist.exe
+gcc ${DBGCFLAGS} hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o ipp_hist.dbg
+
 strip *.exe
