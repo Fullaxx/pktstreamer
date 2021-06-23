@@ -36,7 +36,7 @@ static void inline idlehands(void)
 #endif
 }
 
-void *pcap_thread_watch(void *param)
+static void *pcap_thread_watch(void *param)
 {
 	int z = 0;
 	acap_t *ac = (acap_t *)param;
@@ -67,13 +67,28 @@ void *pcap_thread_watch(void *param)
 	return NULL;
 }
 
-int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int promisc, int max_pkts, void *cb, void *user_data)
+int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, void *cb, void *user_data)
 {
 	int err;
 	pthread_t thr_id;
 	struct bpf_program fp;
+	int snaplen = 0;
+	int promisc = 1;
+	int timeout = 0;
+	int max_pkts = 0;
+	int prefer_adapter_ts = 0;
+	int prefer_nanosec_ts = 0;
 
 	if((!ac) || (!cb)) { return -1; }
+
+	if(opt) {
+		snaplen = opt->snaplen;
+		promisc = opt->promisc;
+		timeout = opt->timeout;
+		max_pkts = opt->max_pkts;
+		prefer_adapter_ts = opt->prefer_adapter_ts;
+		prefer_nanosec_ts = opt->prefer_nanosec_ts;
+	}
 
 	memset(ac, 0, sizeof(acap_t));
 	snprintf(ac->dev, sizeof(ac->dev), "%s", (dev ? dev : "ANY"));
@@ -81,6 +96,7 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int pro
 	ac->user_data = user_data;
 	ac->max_pkts = ((max_pkts > 0) ? max_pkts : 100);
 	snaplen = ((snaplen > 0) ? snaplen : 262144);
+	timeout = ((timeout > 0) ? timeout : 10);
 
 	ac->h = pcap_create(dev, ac->pcap_errbuf);
 	if(ac->h == NULL) {
@@ -100,10 +116,34 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int pro
 		return -4;
 	}
 
-	err = pcap_set_timeout(ac->h, 10);
+	err = pcap_set_timeout(ac->h, timeout);
 	if(err) {
 		fprintf(stderr, "pcap_set_timeout(%s) failed: %d\n", ac->dev, err);
 		return -5;
+	}
+
+	if(prefer_adapter_ts) {
+		// Attempt to use timestamps from the adapter
+		err = pcap_set_tstamp_type(ac->h, PCAP_TSTAMP_ADAPTER);
+		if(err) {
+			if(err == PCAP_WARNING_TSTAMP_TYPE_NOTSUP) {
+				fprintf(stderr, "pcap_set_tstamp_type(%s, PCAP_TSTAMP_ADAPTER) failed: not supported\n", ac->dev);
+			} else {
+				fprintf(stderr, "pcap_set_tstamp_type(%s, PCAP_TSTAMP_ADAPTER) failed: %d\n", ac->dev, err);
+			}
+		}
+	}
+
+	if(prefer_nanosec_ts) {
+		// Attempt to use timestamps with nanoseconds
+		err = pcap_set_tstamp_precision(ac->h, PCAP_TSTAMP_PRECISION_NANO);
+		if(err) {
+			if(err == PCAP_ERROR_TSTAMP_PRECISION_NOTSUP) {
+				fprintf(stderr, "pcap_set_tstamp_precision(%s, PCAP_TSTAMP_PRECISION_NANO) failed: not supported\n", ac->dev);
+			} else {
+				fprintf(stderr, "pcap_set_tstamp_precision(%s, PCAP_TSTAMP_PRECISION_NANO) failed: %d\n", ac->dev, err);
+			}
+		}
 	}
 
 	err = pcap_activate(ac->h);
@@ -113,32 +153,41 @@ int as_pcapture_launch(acap_t *ac, char *dev, char *filter, int snaplen, int pro
 	}
 
 	ac->linktype = pcap_datalink(ac->h);
+	ac->tsprecision = pcap_get_tstamp_precision(ac->h);
+	if(ac->tsprecision == PCAP_TSTAMP_PRECISION_MICRO) {
+		ac->magic = 0xA1B2C3D4;
+	} else if(ac->tsprecision == PCAP_TSTAMP_PRECISION_NANO) {
+		ac->magic = 0xA1B23C4D;
+	} else {
+		fprintf(stderr, "Could not determine magic value!\n");
+		return -7;
+	}
 
 	if(filter) {
 		if(pcap_compile(ac->h, &fp, filter, 1, PCAP_NETMASK_UNKNOWN) == -1) {
 			fprintf(stderr, "pcap_compile(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -7;
+			return -8;
 		}
 
 		if(pcap_setfilter(ac->h, &fp) == -1) {
 			fprintf(stderr, "pcap_setfilter(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -8;
+			return -9;
 		}
 	}
 
 	if(pcap_setnonblock(ac->h, 1, ac->pcap_errbuf) == -1) {
 		fprintf(stderr, "pcap_setnonblock(%s) failed: %s\n", ac->dev, ac->pcap_errbuf);
-		return -9;
+		return -10;
 	}
 
 	if(pthread_create(&thr_id, NULL, &pcap_thread_watch, ac)) {
 		fprintf(stderr, "pthread_create() failed!\n");
-		return -10;
+		return -11;
 	}
 
 	if(pthread_detach(thr_id)) {
 		fprintf(stderr, "pthread_detach() failed!\n");
-		return -11;
+		return -12;
 	}
 
 	return 0;

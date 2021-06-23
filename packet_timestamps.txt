@@ -1,0 +1,10 @@
+# libpcap
+man pcap-tstamp
+man pcap_set_tstamp_type
+
+# tcpdump
+tcpdump -j adapter
+tcpdump -j adapter_unsynced
+tcpdump -j host
+tcpdump -j host_hiprec
+tcpdump -j host_lowprec

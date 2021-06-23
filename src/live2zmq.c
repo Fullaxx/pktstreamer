@@ -22,7 +22,6 @@ int g_verbosity = 0;
 
 zmq_pub_t *g_pktpub = NULL;
 unsigned long g_pkt_id = 0;
-unsigned int g_magic = 0xA1B2C3D4;
 
 static void sig_handler(int signum)
 {
@@ -35,7 +34,6 @@ static void sig_handler(int signum)
 			break;
 	}
 }
-
 
 /*
 	as_zmq_pub_send(g_pktpub, ac->dev, strlen(ac->dev)+1, 1);
@@ -56,7 +54,7 @@ static void publish_packet(acap_t *ac, unsigned char *buf, int len, struct times
 	as_zmq_pub_send(g_pktpub, ac->dev, strlen(ac->dev)+1, 1);
 
 	// Drop the File Header on the ZMQ stream
-	snprintf(zbuf, sizeof(zbuf), "%u/%d/%d/%u/%u", g_magic, ac->linktype, 0, 0, 262144);
+	snprintf(zbuf, sizeof(zbuf), "%u/%d/%d/%u/%u", ac->magic, ac->linktype, 0, 0, 262144);
 	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
 
 	// Drop the Packet Timestamp on the ZMQ stream
@@ -72,9 +70,10 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 	struct timespec myts;
 
 	// Convert fractional seconds to nanoseconds
-	myts.tv_sec  = pcap_hdr->ts.tv_sec;
-	if(g_magic == 0xA1B2C3D4) {
-		myts.tv_nsec = pcap_hdr->ts.tv_usec*1000;
+	myts.tv_sec = pcap_hdr->ts.tv_sec;
+	myts.tv_nsec = pcap_hdr->ts.tv_usec;
+	if(ac->tsprecision == PCAP_TSTAMP_PRECISION_MICRO) {
+		myts.tv_nsec *= 1000;
 	}
 
 	g_pkt_id++;
@@ -93,22 +92,28 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 
 int main(int argc, char *argv[])
 {
-	int p = 1, snaplen = 0;
-	unsigned int max_pkts = 0;
 	int retval;
 	acap_t ac;
+	acap_opt_t asopt;
 
+	// Initialize Memory
 	memset(&ac, 0, sizeof(ac));
+	memset(&asopt, 0, sizeof(asopt));
+	asopt.promisc = 1;
+
+	// Parse Command Line Arguments
 	parse_args(argc, argv);
 
+	// Start the ZMQ Publisher
 	g_pktpub = as_zmq_pub_create(g_zmqsockaddr, 0, 0);
 	if(!g_pktpub) {
 		fprintf(stderr, "as_zmq_pub_create(%s) failed!\n", g_zmqsockaddr);
 		return 1;
 	}
 
+	// Start the Packet Capture
 	printf("Opening %s ...\n", (g_dev ? g_dev : "ANY"));
-	retval = as_pcapture_launch(&ac, g_dev, g_filter, snaplen, p, max_pkts, &recv_packet, NULL);
+	retval = as_pcapture_launch(&ac, &asopt, g_dev, g_filter, &recv_packet, NULL);
 	if(retval < 0) {
 		as_zmq_pub_destroy(g_pktpub);
 		fprintf(stderr, "as_pcapture_launch(%s) failed!!\n", g_dev);
@@ -124,8 +129,9 @@ int main(int argc, char *argv[])
 
 	while(!g_shutdown) { usleep(100); }
 
-	if(g_verbosity == 1) { printf("\n"); }
+	// Shutdown the Packet Capture
 	as_pcapture_stop(&ac);
+	if(g_verbosity == 1) { printf("\n"); }
 
 	// Shutdown the ZMQ PUB bus
 	if(g_pktpub) {

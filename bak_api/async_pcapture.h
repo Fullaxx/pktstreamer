@@ -29,18 +29,34 @@ extern "C" {
 
 typedef struct async_capture_thread {
 	pcap_t *h;
-	AS_PKT_CALLBACK(*cb);
-	void *user_data;
-	char pcap_errbuf[PCAP_ERRBUF_SIZE];
 	char dev[IFNAMSIZ+1];
-	int linktype;
-	int max_pkts;
-	int do_close;			//trigger to stop the capturing thread
-	int closed;				//trigger to let the main program know the thread has exited
-	int dispatch_error;		//this will be a trigger to tell the main that our thread had a problem and had to exit
+	char pcap_errbuf[PCAP_ERRBUF_SIZE];
+
+	AS_PKT_CALLBACK(*cb);	// Callback that will process packets
+	void *user_data;
+
+	int max_pkts;		// Pass this to pcap_dispatch
+
+	int linktype;		// Get the linktype from the pcap handle
+	int tsprecision;	// Get the timestamp precision from the pcap handle
+	unsigned int magic;	// Store the associated magic number
+
+	int do_close;		//trigger to stop the capturing thread
+	int closed;			//trigger to let the main program know the thread has exited
+	int dispatch_error;	//this will be a trigger to tell main that pcap_dispatch had a problem and had to exit
 } acap_t;
 
-int as_pcapture_launch(acap_t *, char *, char *, int, int, int, void *, void *);
+typedef struct {
+	int snaplen;
+	int promisc;
+	int timeout;
+	int max_pkts;
+
+	int prefer_adapter_ts;
+	int prefer_nanosec_ts;
+} acap_opt_t;
+
+int as_pcapture_launch(acap_t *, acap_opt_t *, char *, char *, void *, void *);
 void as_pcapture_stop(acap_t *);
 
 #ifdef __cplusplus
