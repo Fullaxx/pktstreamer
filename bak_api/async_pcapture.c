@@ -70,6 +70,7 @@ static void *pcap_thread_watch(void *param)
 int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, void *cb, void *user_data)
 {
 	int err;
+	char *err_str = NULL;
 	pthread_t thr_id;
 	struct bpf_program fp;
 	int snaplen = 0;
@@ -148,7 +149,20 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 
 	err = pcap_activate(ac->h);
 	if(err) {
-		fprintf(stderr, "pcap_activate(%s) failed: %d\n", ac->dev, err);
+		switch(err) {
+			case PCAP_ERROR_ACTIVATED: err_str = "handle is active"; break;
+			case PCAP_ERROR_NO_SUCH_DEVICE: err_str = "no such device"; break;
+			case PCAP_ERROR_RFMON_NOTSUP: err_str = "rfmon not supported"; break;
+			case PCAP_ERROR_NOT_RFMON: err_str = "not in monitor mode"; break;
+			case PCAP_ERROR_PERM_DENIED: err_str = "permission denied"; break;
+			case PCAP_ERROR_IFACE_NOT_UP: err_str = "interface not up"; break;
+			case PCAP_ERROR_PROMISC_PERM_DENIED: err_str = "promisc permission denied"; break;
+		}
+		if(err_str) {
+			fprintf(stderr, "pcap_activate(%s) failed: %s\n", ac->dev, err_str);
+		} else {
+			fprintf(stderr, "pcap_activate(%s) failed: %d\n", ac->dev, err);
+		}
 		return -6;
 	}
 
