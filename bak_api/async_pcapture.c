@@ -50,7 +50,7 @@ static void *pcap_thread_watch(void *param)
 	while(!ac->do_close) {
 		z = pcap_dispatch(ac->h, ac->max_pkts, ac->cb, (u_char *)ac);
 		if(z < 0) {
-			fprintf(stderr, "pcap_dispatch(%s) error: %s", ac->dev, pcap_geterr(ac->h));
+			fprintf(stderr, "pcap_dispatch(%s) error: %s\n", ac->dev, pcap_geterr(ac->h));
 			ac->dispatch_error = 1;
 			ac->do_close = 1;
 		} else if(z == 0) { idlehands(); }

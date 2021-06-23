@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 	//signal(SIGALRM, alarm_handler);
 	//(void) alarm(30);
 
-	while(!g_shutdown) { usleep(100); }
+	while(!g_shutdown && !ac.dispatch_error) { usleep(100); }
 
 	// Shutdown the Packet Capture
 	as_pcapture_stop(&ac);
