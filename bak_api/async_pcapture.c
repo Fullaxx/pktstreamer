@@ -150,6 +150,7 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 	err = pcap_activate(ac->h);
 	if(err) {
 		switch(err) {
+			case PCAP_ERROR: err_str = pcap_geterr(ac->h); break;
 			case PCAP_ERROR_ACTIVATED: err_str = "handle is active"; break;
 			case PCAP_ERROR_NO_SUCH_DEVICE: err_str = "no such device"; break;
 			case PCAP_ERROR_RFMON_NOTSUP: err_str = "rfmon not supported"; break;
