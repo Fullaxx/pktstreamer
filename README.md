@@ -70,12 +70,23 @@ or to print packets into wireshark/tshark/tcpdump
 ./pkt_writer.exe -Z tcp://localhost:9999 --stats -P shiny_new.pcap
 ```
 
-## Histogram Example
-Use ipp_hist to collect a histogram of IP Protocols seen
+## Histogram example
+Use hist_ipp to collect a histogram of IP Protocols \
+Use hist_tcp to collect a histogram of TCP port numbers \
+Use hist_udp to collect a histogram of UDP port numbers
 ```
-./ipp_hist.exe -Z tcp://localhost:9999
-./ipp_hist.exe -Z tcp://localhost:9999 --csv
-./ipp_hist.exe -Z tcp://localhost:9999 --all
-./ipp_hist.exe -Z tcp://localhost:9999 --all --csv
-./ipp_hist.exe -Z tcp://localhost:9999 --stats
+./hist_ipp.exe -Z tcp://localhost:9999
+./hist_ipp.exe -Z tcp://localhost:9999 --csv
+./hist_ipp.exe -Z tcp://localhost:9999 --all
+./hist_ipp.exe -Z tcp://localhost:9999 --all --csv
+
+./hist_tcp.exe -Z tcp://localhost:9999
+./hist_tcp.exe -Z tcp://localhost:9999 --csv
+./hist_tcp.exe -Z tcp://localhost:9999 --all
+./hist_tcp.exe -Z tcp://localhost:9999 --all --csv
+
+./hist_udp.exe -Z tcp://localhost:9999
+./hist_udp.exe -Z tcp://localhost:9999 --csv
+./hist_udp.exe -Z tcp://localhost:9999 --all
+./hist_udp.exe -Z tcp://localhost:9999 --all --csv
 ```

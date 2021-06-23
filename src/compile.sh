@@ -24,7 +24,13 @@ gcc ${DBGCFLAGS} pcap2zmq.c ${BAKAPIDIR}/{getopts,async_zmq_pub}.c -lpthread -lp
 gcc ${OPTCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.exe
 gcc ${DBGCFLAGS} pkt_recv.c output.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o pkt_writer.dbg
 
-gcc ${OPTCFLAGS} hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o ipp_hist.exe
-gcc ${DBGCFLAGS} hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o ipp_hist.dbg
+gcc ${OPTCFLAGS} -DHISTIPP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_ipp.exe
+gcc ${DBGCFLAGS} -DHISTIPP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_ipp.dbg
+
+gcc ${OPTCFLAGS} -DHISTTCP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_tcp.exe
+gcc ${DBGCFLAGS} -DHISTTCP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_tcp.dbg
+
+gcc ${OPTCFLAGS} -DHISTUDP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_udp.exe
+gcc ${DBGCFLAGS} -DHISTUDP hist_main.c histogram.c ${BAKAPIDIR}/{getopts,async_zmq_sub}.c -lpthread -lzmq -o hist_udp.dbg
 
 strip *.exe

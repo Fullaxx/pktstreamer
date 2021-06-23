@@ -27,20 +27,80 @@
 
 // Globals
 int g_linktype = -1;
-unsigned long ipp_hist[256];
-unsigned long g_zmqerr_count;
-unsigned long g_zmqpkt_count;
-unsigned long g_proto_count;
+
+#ifdef HISTIPP
+unsigned long g_hist[256];
+unsigned long g_proto_count = 0;
+#endif
+
+#if defined(HISTTCP) || defined(HISTUDP)
+unsigned long g_hist[65536];
+unsigned long g_port_count = 0;
+#endif
+
+unsigned long g_zmqerr_count = 0;
+unsigned long g_zmqpkt_count = 0;
 
 // Externals found in hist_main.c
 extern int g_verbose;
 
 void print_stats(void)
 {
+#ifdef HISTIPP
 	fprintf(stderr, "%lu/%lu/%lu\n", g_zmqerr_count, g_zmqpkt_count, g_proto_count);
-	g_zmqpkt_count = g_zmqerr_count = g_proto_count = 0;
+	g_proto_count = 0;
+#endif
+
+#if defined(HISTTCP) || defined(HISTUDP)
+	fprintf(stderr, "%lu/%lu/%lu\n", g_zmqerr_count, g_zmqpkt_count, g_port_count);
+	g_port_count = 0;
+#endif
+
+	g_zmqpkt_count = g_zmqerr_count = 0;
 	fflush(stderr);
 }
+
+#ifdef HISTTCP
+#include <netinet/tcp.h>
+#define SIZE_TCP (sizeof(struct tcphdr))
+static void process_tcp(unsigned char *buf, int len)
+{
+	struct tcphdr *tcp = (struct tcphdr *)buf;
+	unsigned short sport;
+	unsigned short dport;
+
+	if(len < SIZE_TCP) { return; }
+
+	sport = ntohs(tcp->th_sport);
+	dport = ntohs(tcp->th_dport);
+	g_hist[sport]++;
+	g_hist[dport]++;
+	g_port_count += 2;
+
+	if(g_verbose) { fprintf(stderr, "%5u %5u", sport, dport); }
+}
+#endif
+
+#ifdef HISTUDP
+#include <netinet/udp.h>
+#define SIZE_UDP (sizeof(struct udphdr))
+static void process_udp(unsigned char *buf, int len)
+{
+	struct udphdr *udp = (struct udphdr *)buf;
+	unsigned short sport;
+	unsigned short dport;
+
+	if(len < SIZE_UDP) { return; }
+
+	sport = ntohs(udp->uh_sport);
+	dport = ntohs(udp->uh_dport);
+	g_hist[sport]++;
+	g_hist[dport]++;
+	g_port_count += 2;
+
+	if(g_verbose) { fprintf(stderr, " %5u %5u", sport, dport); }
+}
+#endif
 
 #include <netinet/ip.h>
 #define SIZE_IPV4 (sizeof(struct ip))
@@ -51,7 +111,7 @@ static void process_ipv4(unsigned char *buf, int len)
 #else
 	struct ip *ip4 = (struct ip *)buf;
 #endif
-	//unsigned char hl;
+	unsigned char hl;
 	unsigned short tl;
 	unsigned char proto;
 	char src_addr[INET_ADDRSTRLEN];
@@ -60,25 +120,34 @@ static void process_ipv4(unsigned char *buf, int len)
 	if(len < SIZE_IPV4) { return; }
 
 #ifdef USE_IPHDR
-	//hl = ip4->ihl << 2;
+	hl = ip4->ihl << 2;
 	tl = ntohs(ip4->tot_len);
 	proto = ip4->protocol;
 	inet_ntop(AF_INET, &ip4->saddr, &src_addr[0], INET_ADDRSTRLEN);
 	inet_ntop(AF_INET, &ip4->daddr, &dst_addr[0], INET_ADDRSTRLEN);
 #else
-	//hl = ip4->ip_hl << 2;
+	hl = ip4->ip_hl << 2;
 	tl = ntohs(ip4->ip_len);
 	proto = ip4->ip_p;
 	inet_ntop(AF_INET, &ip4->ip_src, &src_addr[0], INET_ADDRSTRLEN);
 	inet_ntop(AF_INET, &ip4->ip_dst, &dst_addr[0], INET_ADDRSTRLEN);
 #endif
 
-	ipp_hist[proto]++;
+#ifdef HISTIPP
+	g_hist[proto]++;
 	g_proto_count++;
-	if(g_verbose) { fprintf(stderr, "%15s -> %15s %4u %3u ", &src_addr[0], &dst_addr[0], tl, proto); }
+#endif
 
-	//buf += hl; len -= hl;
-	//process_payload(buf, len);
+	buf += hl; len -= hl;
+	if(g_verbose) { fprintf(stderr, "%15s -> %15s %4u %3u", &src_addr[0], &dst_addr[0], tl, proto); }
+
+#ifdef HISTTCP
+	if(proto == IPPROTO_TCP) { process_tcp(buf, len); }
+#endif
+#ifdef HISTUDP
+	if(proto == IPPROTO_UDP) { process_udp(buf, len); }
+#endif
+
 	if(g_verbose) { fprintf(stderr, "\n"); fflush(stderr); }
 }
 
@@ -92,9 +161,7 @@ static void process_eth(unsigned char *buf, int len)
 
 	pp = (unsigned short *) (buf+12);
 	proto = ntohs(*pp);
-
-	buf += SIZE_ETHERNET;
-	len -= SIZE_ETHERNET;
+	buf += SIZE_ETHERNET; len -= SIZE_ETHERNET;
 
 	if(proto == ETHERTYPE_IP) {
 		process_ipv4(buf, len);
@@ -111,8 +178,7 @@ static void process_sll(unsigned char *buf, int len)
 	if(len < SIZE_SLL) { return; }
 
 	proto = ntohs(sll->sll_protocol);
-	buf += SIZE_SLL;
-	len -= SIZE_SLL;
+	buf += SIZE_SLL; len -= SIZE_SLL;
 
 	if(proto == ETHERTYPE_IP) {
 		process_ipv4(buf, len);
@@ -186,19 +252,23 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 
 void init_hist(void)
 {
-	memset(&ipp_hist[0], 0, sizeof(ipp_hist));
+	memset(&g_hist[0], 0, sizeof(g_hist));
 }
 
 void fini_hist(int print_all, int fmt_csv)
 {
-	int i;
+	int i, nmembers;
 
-	for(i=0; i<256; i++) {
-		if(print_all || ipp_hist[i]) {
+	// nmembers = 256   for IPP
+	// nmembers = 65536 for TCP/UDP
+	nmembers = sizeof(g_hist)/sizeof(g_hist[0]);
+
+	for(i=0; i<nmembers; i++) {
+		if(print_all || g_hist[i]) {
 			if(fmt_csv) {
-				printf("%d,%lu\n", i, ipp_hist[i]);
+				printf("%d,%lu\n", i, g_hist[i]);
 			} else {
-				printf("%03d: %lu\n", i, ipp_hist[i]);
+				printf("%d: %lu\n", i, g_hist[i]);
 			}
 		}
 	}
