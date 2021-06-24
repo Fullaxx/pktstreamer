@@ -30,9 +30,9 @@ cd src
 ```
 
 ## Setup a ZMQ PUB bus to put packets on
-Use live2zmq.exe to capture packets from a network interface \
-Use pcap2zmq.exe to replay packets from a pcap file \
-Any packets received will be published to ZMQ
+Use live2zmq.exe to capture packets from a network interface. \
+Use pcap2zmq.exe to replay packets from a pcap file. \
+Any packets received will be published to ZMQ.
 ```
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999
 ./pcap2zmq.exe -v 1 -P mypackets.pcap -Z tcp://*:9999
@@ -40,7 +40,7 @@ Any packets received will be published to ZMQ
 
 ## Wireless example
 This will configure a wireless adapter in monitor mode \
-and allow live2zmq to sniff 802.11 packets
+and allow live2zmq to sniff 802.11 packets.
 ```
 iw dev wlan0 set monitor fcsfail control otherbss
 ifconfig wlan0 promisc up
@@ -71,7 +71,7 @@ You have been warned.
 
 ## Subscribe to a packet stream
 Use pkt_writer.exe to save packets to a pcap file \
-or to print packets into wireshark/tshark/tcpdump
+or to print packets into wireshark/tshark/tcpdump.
 ```
 ./pkt_writer.exe -Z tcp://localhost:9999         | wireshark -k -i -
 ./pkt_writer.exe -Z tcp://localhost:9999         | tshark -r -
