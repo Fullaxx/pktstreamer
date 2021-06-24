@@ -81,9 +81,10 @@ or to print packets into wireshark/tshark/tcpdump
 ```
 
 ## Histogram example
-Use hist_ipp to collect a histogram of IP Protocols \
-Use hist_tcp to collect a histogram of TCP port numbers \
-Use hist_udp to collect a histogram of UDP port numbers
+Use hist_ipp to collect a histogram of IP Protocols. \
+Use hist_tcp to collect a histogram of TCP port numbers. \
+Use hist_udp to collect a histogram of UDP port numbers. \
+The histograms will collect data until you type Ctrl-C or kill them.
 ```
 ./hist_ipp.exe -Z tcp://localhost:9999
 ./hist_ipp.exe -Z tcp://localhost:9999 --csv
