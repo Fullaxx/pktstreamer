@@ -44,6 +44,9 @@ unsigned long g_zmqpkt_count = 0;
 // Externals found in hist_main.c
 extern int g_verbose;
 
+// Prototype
+static void process_ipv4(unsigned char *buf, int len);
+
 void print_stats(void)
 {
 #ifdef HISTIPP
@@ -77,7 +80,7 @@ static void process_tcp(unsigned char *buf, int len)
 	g_hist[dport]++;
 	g_port_count += 2;
 
-	if(g_verbose) { fprintf(stderr, "%5u %5u", sport, dport); }
+	if(g_verbose) { fprintf(stderr, " %5u %5u", sport, dport); }
 }
 #endif
 
@@ -102,6 +105,47 @@ static void process_udp(unsigned char *buf, int len)
 }
 #endif
 
+#include <netinet/ip6.h>
+#define SIZE_IPV6 (sizeof(struct ip6_hdr))
+static void process_ipv6(unsigned char *buf, int len)
+{
+	struct ip6_hdr *ip6 = (struct ip6_hdr *)buf;
+	unsigned char ip_vers;
+	unsigned short psize;
+	unsigned char next_hdr;
+	char src_addr[INET6_ADDRSTRLEN];
+	char dst_addr[INET6_ADDRSTRLEN];
+
+	if(len < SIZE_IPV6) { return; }
+
+	ip_vers = (ntohl(ip6->ip6_flow) & 0xF0000000) >> 28;
+	if(ip_vers != 6) { return; }
+
+	psize = ntohs(ip6->ip6_plen);
+	next_hdr = ip6->ip6_nxt;
+	inet_ntop(AF_INET6, &ip6->ip6_src, &src_addr[0], INET6_ADDRSTRLEN);
+	inet_ntop(AF_INET6, &ip6->ip6_dst, &dst_addr[0], INET6_ADDRSTRLEN);
+
+#ifdef HISTIPP
+	g_hist[next_hdr]++;
+	g_proto_count++;
+#endif
+
+	buf += SIZE_IPV6; len -= SIZE_IPV6;
+	if(g_verbose) { fprintf(stderr, " %s -> %s %4u %3u", &src_addr[0], &dst_addr[0], psize, next_hdr); }
+
+	if(next_hdr == IPPROTO_IPIP) { process_ipv4(buf, len); }
+	if(next_hdr == IPPROTO_IPV6) { process_ipv6(buf, len); }
+
+#ifdef HISTTCP
+	if(next_hdr == IPPROTO_TCP) { process_tcp(buf, len); }
+#endif
+#ifdef HISTUDP
+	if(next_hdr == IPPROTO_UDP) { process_udp(buf, len); }
+#endif
+
+}
+
 #include <netinet/ip.h>
 #define SIZE_IPV4 (sizeof(struct ip))
 static void process_ipv4(unsigned char *buf, int len)
@@ -111,6 +155,7 @@ static void process_ipv4(unsigned char *buf, int len)
 #else
 	struct ip *ip4 = (struct ip *)buf;
 #endif
+	unsigned char ip_vers;
 	unsigned char hl;
 	unsigned short tl;
 	unsigned char proto;
@@ -118,6 +163,13 @@ static void process_ipv4(unsigned char *buf, int len)
 	char dst_addr[INET_ADDRSTRLEN];
 
 	if(len < SIZE_IPV4) { return; }
+
+#ifdef USE_IPHDR
+	ip_vers = ip4->ip_version;
+#else
+	ip_vers = ip4->ip_v;
+#endif
+	if(ip_vers != 4) { return; }
 
 #ifdef USE_IPHDR
 	hl = ip4->ihl << 2;
@@ -139,7 +191,10 @@ static void process_ipv4(unsigned char *buf, int len)
 #endif
 
 	buf += hl; len -= hl;
-	if(g_verbose) { fprintf(stderr, "%15s -> %15s %4u %3u", &src_addr[0], &dst_addr[0], tl, proto); }
+	if(g_verbose) { fprintf(stderr, " %15s -> %15s %4u %3u", &src_addr[0], &dst_addr[0], tl, proto); }
+
+	if(proto == IPPROTO_IPIP) { process_ipv4(buf, len); }
+	if(proto == IPPROTO_IPV6) { process_ipv6(buf, len); }
 
 #ifdef HISTTCP
 	if(proto == IPPROTO_TCP) { process_tcp(buf, len); }
@@ -148,7 +203,6 @@ static void process_ipv4(unsigned char *buf, int len)
 	if(proto == IPPROTO_UDP) { process_udp(buf, len); }
 #endif
 
-	if(g_verbose) { fprintf(stderr, "\n"); fflush(stderr); }
 }
 
 #include <net/ethernet.h>
@@ -163,9 +217,8 @@ static void process_eth(unsigned char *buf, int len)
 	proto = ntohs(*pp);
 	buf += SIZE_ETHERNET; len -= SIZE_ETHERNET;
 
-	if(proto == ETHERTYPE_IP) {
-		process_ipv4(buf, len);
-	}
+	if(proto == ETHERTYPE_IP) { process_ipv4(buf, len); }
+	if(proto == ETHERTYPE_IPV6) { process_ipv6(buf, len); }
 }
 
 #include <pcap/sll.h>
@@ -180,9 +233,8 @@ static void process_sll(unsigned char *buf, int len)
 	proto = ntohs(sll->sll_protocol);
 	buf += SIZE_SLL; len -= SIZE_SLL;
 
-	if(proto == ETHERTYPE_IP) {
-		process_ipv4(buf, len);
-	}
+	if(proto == ETHERTYPE_IP) { process_ipv4(buf, len); }
+	if(proto == ETHERTYPE_IPV6) { process_ipv6(buf, len); }
 }
 
 static void get_linktype(zmq_mf_t *fh_msg)
@@ -233,6 +285,8 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 		get_linktype(fh_msg);
 	}
 
+	if(g_verbose) { fprintf(stderr, "%s:", (char *)dev_msg->buf); }
+
 	switch(g_linktype) {
 		case DLT_EN10MB:				//  1
 			process_eth(pkt_msg->buf, pkt_msg->size);
@@ -256,6 +310,7 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 			printf("Unknown Linktype %d\n", g_linktype);*/
 	}
 
+	if(g_verbose) { fprintf(stderr, "\n"); fflush(stderr); }
 	g_zmqpkt_count++;
 }
 
