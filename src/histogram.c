@@ -110,7 +110,7 @@ static void process_udp(unsigned char *buf, int len)
 static void process_ipv6(unsigned char *buf, int len)
 {
 	struct ip6_hdr *ip6 = (struct ip6_hdr *)buf;
-	unsigned char ip_vers;
+	unsigned char v;
 	unsigned short psize;
 	unsigned char next_hdr;
 	char src_addr[INET6_ADDRSTRLEN];
@@ -118,8 +118,8 @@ static void process_ipv6(unsigned char *buf, int len)
 
 	if(len < SIZE_IPV6) { return; }
 
-	ip_vers = (ntohl(ip6->ip6_flow) & 0xF0000000) >> 28;
-	if(ip_vers != 6) { return; }
+	v = (buf[0] & 0xF0) >> 4;
+	if(v != 6) { return; }
 
 	psize = ntohs(ip6->ip6_plen);
 	next_hdr = ip6->ip6_nxt;
@@ -155,7 +155,7 @@ static void process_ipv4(unsigned char *buf, int len)
 #else
 	struct ip *ip4 = (struct ip *)buf;
 #endif
-	unsigned char ip_vers;
+	unsigned char v;
 	unsigned char hl;
 	unsigned short tl;
 	unsigned char proto;
@@ -164,12 +164,8 @@ static void process_ipv4(unsigned char *buf, int len)
 
 	if(len < SIZE_IPV4) { return; }
 
-#ifdef USE_IPHDR
-	ip_vers = ip4->ip_version;
-#else
-	ip_vers = ip4->ip_v;
-#endif
-	if(ip_vers != 4) { return; }
+	v = (buf[0] & 0xF0) >> 4;
+	if(v != 4) { return; }
 
 #ifdef USE_IPHDR
 	hl = ip4->ihl << 2;
