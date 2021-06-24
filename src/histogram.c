@@ -243,7 +243,16 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 		case DLT_LINUX_SLL:				//113
 			process_sll(pkt_msg->buf, pkt_msg->size);
 			break;
-		/*default:
+		/*case DLT_IEEE802_11:			//105
+			process_wlan(pkt_msg->buf, pkt_msg->size);
+			break;
+		case DLT_IEEE802_11_RADIO:		//127
+			process_radiotap(pkt_msg->buf, pkt_msg->size);
+			break;
+		case DLT_IEEE802_11_RADIO_AVS:	//163
+			process_radiotap_avs(pkt_msg->buf, pkt_msg->size);
+			break;
+		default:
 			printf("Unknown Linktype %d\n", g_linktype);*/
 	}
 
