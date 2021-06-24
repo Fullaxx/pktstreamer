@@ -45,7 +45,7 @@ and allow live2zmq to sniff 802.11 packets
 iw dev wlan0 set monitor fcsfail control otherbss
 ifconfig wlan0 promisc up
 iw dev wlan0 set channel 11
-./live2zmq.exe -i wlan0 -Z tcp://*:9999
+./live2zmq.exe -v 2 -i wlan0 -Z tcp://*:9999
 ```
 
 ## Use a BPF to exclude unwanted packets
