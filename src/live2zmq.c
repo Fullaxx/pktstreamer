@@ -102,7 +102,12 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 	}
 
 	if(g_verbosity == 2) {
-		printf("%ld.%09ld\n", myts.tv_sec, myts.tv_nsec);
+		if(ac->tsprecision == PCAP_TSTAMP_PRECISION_MICRO) {
+			printf("%ld.%06ld\n", pcap_hdr->ts.tv_sec, pcap_hdr->ts.tv_usec);
+		}
+		if(ac->tsprecision == PCAP_TSTAMP_PRECISION_NANO) {
+			printf("%ld.%09ld\n", myts.tv_sec, myts.tv_nsec);
+		}
 		fflush(stdout);
 	}
 }
