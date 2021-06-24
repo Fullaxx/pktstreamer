@@ -205,6 +205,17 @@ static void process_ipv4(unsigned char *buf, int len)
 
 }
 
+static void process_raw(unsigned char *buf, int len)
+{
+	unsigned char v;
+
+	if(len < 20) { return; }
+
+	v = (buf[0] & 0xF0) >> 4;
+	if(v == 4) { process_ipv4(buf, len); }
+	if(v == 6) { process_ipv6(buf, len); }
+}
+
 #include <net/ethernet.h>
 #define SIZE_ETHERNET (sizeof(struct ether_header))
 static void process_eth(unsigned char *buf, int len)
@@ -292,7 +303,7 @@ void pkt_cb(zmq_sub_t *s, zmq_mf_t **mpa, int msgcnt, void *user_data)
 			process_eth(pkt_msg->buf, pkt_msg->size);
 			break;
 		case DLT_RAW:					// 12
-			process_ipv4(pkt_msg->buf, pkt_msg->size);
+			process_raw(pkt_msg->buf, pkt_msg->size);
 			break;
 		case DLT_LINUX_SLL:				//113
 			process_sll(pkt_msg->buf, pkt_msg->size);
