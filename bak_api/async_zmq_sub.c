@@ -15,9 +15,9 @@
 	Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 */
 
-/*#ifdef DEBUG
+#ifdef DEBUG
 #include <stdio.h>
-#endif*/
+#endif
 
 #include <stdlib.h>
 #include <string.h>
@@ -34,13 +34,14 @@
 static void* zmq_sub_thread(void *param)
 {
 	int mpi, msgsize, more, i;
-	size_t smore=sizeof(more);
+	size_t smore;
 	zmq_msg_t zMessage;
 	zmq_mf_t **mpa;
 	zmq_mf_t *thispart;
 	ZSParam_t *p = (ZSParam_t *)param;
 	zmq_sub_t *sub = p->q;
 
+	smore = sizeof(more);
 	prctl(PR_SET_NAME, AS_ZMQ_SUB_THREADNAME, 0, 0, 0);
 
 	// we repeat until the connection has been closed
@@ -50,7 +51,7 @@ static void* zmq_sub_thread(void *param)
 		msgsize = zmq_msg_recv(&zMessage, sub->zSocket, ZMQ_DONTWAIT);
 		if(msgsize == -1) {
 			if(errno == EAGAIN) { usleep(100); continue; }
-			else break;
+			else { break; }
 		}
 
 		mpa = calloc(AS_ZMQ_MAX_PARTS, sizeof(zmq_mf_t *));
@@ -88,12 +89,19 @@ static int as_zmq_sub_attach(zmq_sub_t *sub, void *func, void *user)
 	pthread_t thr_id;
 	ZSParam_t *p = (ZSParam_t *)calloc(1, sizeof(ZSParam_t));
 
+	if(!p) {
+#ifdef DEBUG
+		fprintf(stderr, "calloc(1, %lu) failed!\n", sizeof(ZSParam_t));
+#endif
+		return -1;
+	}
+
 	p->q = sub;
 	p->cb = func;
 	p->user_data = user;
 
-	if( pthread_create(&thr_id, NULL, &zmq_sub_thread, p) ) { free(p); return -1; }
-	if( pthread_detach(thr_id) ) { free(p); return -1; }
+	if( pthread_create(&thr_id, NULL, &zmq_sub_thread, p) ) { free(p); return -2; }
+	if( pthread_detach(thr_id) ) { free(p); return -3; }
 
 	return 0;
 }
@@ -135,7 +143,7 @@ void as_zmq_sub_destroy(zmq_sub_t *sub)
 
 	if(sub->connected) {
 		sub->do_close = 1;
-		while(!sub->closed) usleep(1000);
+		while(!sub->closed) { usleep(1000); }
 		zmq_close(sub->zSocket);
 		zmq_ctx_term(sub->zContext);
 	}
