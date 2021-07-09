@@ -92,14 +92,17 @@ static int as_zmq_sub_attach(zmq_sub_t *sub, void *func, void *user)
 	p->cb = func;
 	p->user_data = user;
 
-	if( pthread_create(&thr_id, NULL, &zmq_sub_thread, p) ) goto bail;
-	if( pthread_detach(thr_id) ) goto bail;
+	if( pthread_create(&thr_id, NULL, &zmq_sub_thread, p) ) { free(p); return -1; }
+	if( pthread_detach(thr_id) ) { free(p); return -1; }
 
 	return 0;
+}
 
-bail:
-	free(p);
-	return -1;
+static void handle_error(zmq_sub_t *sub)
+{
+	zmq_close(sub->zSocket);
+	zmq_ctx_term(sub->zContext);
+	free(sub);
 }
 
 zmq_sub_t* as_zmq_sub_create(char *zSockAddr, char *filter, void *func, int recv_hwm, void *user)
@@ -112,32 +115,18 @@ zmq_sub_t* as_zmq_sub_create(char *zSockAddr, char *filter, void *func, int recv
 	sub->zSocket = zmq_socket(sub->zContext, ZMQ_SUB);
 
 	r = zmq_setsockopt(sub->zSocket, ZMQ_RCVHWM, &recv_hwm, sizeof(recv_hwm));
-	if(r != 0) {
-		goto bail;
-	}
+	if(r != 0) { handle_error(sub); return NULL; }
 
 	r = zmq_connect(sub->zSocket, zSockAddr);
-	if(r != 0) {
-		goto bail;
-	}
+	if(r != 0) { handle_error(sub); return NULL; }
 
 	r = zmq_setsockopt(sub->zSocket, ZMQ_SUBSCRIBE, filter, strlen(filter));
-	if(r != 0) {
-		goto bail;
-	}
+	if(r != 0) { handle_error(sub); return NULL; }
 
 	r = as_zmq_sub_attach(sub, func, user);
-	if(r != 0) {
-		goto bail;
-	}
+	if(r != 0) { handle_error(sub); return NULL; }
 
 	return sub;
-
-bail:
-	zmq_close(sub->zSocket);
-	zmq_ctx_term(sub->zContext);
-	free(sub);
-	return NULL;
 }
 
 void as_zmq_sub_destroy(zmq_sub_t *sub)
