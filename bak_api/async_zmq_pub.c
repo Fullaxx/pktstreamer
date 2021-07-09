@@ -29,7 +29,7 @@ int as_zmq_pub_send(zmq_pub_t *pub, void *msg, size_t len, int more)
 {
 	int r;
 	zmq_msg_t message;
-	
+
 	if(!pub->connected) { return -1; }
 
 	r = zmq_msg_init_size(&message, len);
