@@ -20,6 +20,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <signal.h>
+#include <time.h>
 
 #include "getopts.h"
 #include "async_zmq_sub.h"
@@ -38,16 +39,64 @@ unsigned int g_stats = 0;
 unsigned int g_us_ts = 0;
 unsigned int g_ns_ts = 0;
 
+// Status Variables
 unsigned long g_zmqerr_count = 0;
 unsigned long g_zmqpkt_count = 0;
+unsigned long g_pcap_count = 0;
+unsigned long g_pcap_size = 0;
+
+// Stop Conditionals
+time_t g_stoptime = 0;
+unsigned long g_maxpkts = 0;
+unsigned long g_maxsize = 0;
 
 static void alarm_handler(int signum)
 {
-	fprintf(stderr, "%lu/%lu\n", g_zmqerr_count, g_zmqpkt_count);
-	g_zmqpkt_count = g_zmqerr_count = 0;
-	(void) alarm(1);
+	char *size_units, *count_units;
+	unsigned long size, count;
 
+	if(g_pcap_size >= 1000000000000) {
+		size_units = "TB";
+		size = g_pcap_size/1000000000000;
+	} else if(g_pcap_size >= 1000000000) {
+		size_units = "GB";
+		size = g_pcap_size/1000000000;
+	} else if(g_pcap_size >= 1000000) {
+		size_units = "MB";
+		size = g_pcap_size/1000000;
+	} else if(g_pcap_size >= 1000) {
+		size_units = "KB";
+		size = g_pcap_size/1000;
+	} else {
+		size_units = "B";
+		size = g_pcap_size;
+	}
+
+	if(g_pcap_count >= 1000000000000) {
+		count_units = "t";
+		count = g_pcap_count/1000000000000;
+	} else if(g_pcap_count >= 1000000000) {
+		count_units = "b";
+		count = g_pcap_count/1000000000;
+	} else if(g_pcap_count >= 1000000) {
+		count_units = "m";
+		count = g_pcap_count/1000000;
+	} else if(g_pcap_count >= 1000) {
+		count_units = "k";
+		count = g_pcap_count/1000;
+	} else {
+		count_units = "";
+		count = g_pcap_count;
+	}
+
+	fprintf(stderr, "%lu/%lu", g_zmqerr_count, g_zmqpkt_count);
+	g_zmqpkt_count = g_zmqerr_count = 0;
+	fprintf(stderr, " [%lu%s]", size, size_units);
+	fprintf(stderr, " (%lu%s)", count, count_units);
+	fprintf(stderr, "\n");
 	fflush(stderr);
+
+	(void) alarm(1);
 }
 
 static void sig_handler(int signum)
@@ -62,6 +111,21 @@ static void sig_handler(int signum)
 		case SIGQUIT:
 			g_shutdown = 1;
 			break;
+	}
+}
+
+static void check_for_stop_condition(void)
+{
+	if(g_stoptime) {
+		if(time(NULL) >= g_stoptime) { g_shutdown = 1; }
+	}
+
+	if(g_maxpkts) {
+		if(g_pcap_count >= g_maxpkts) { g_shutdown = 1; }
+	}
+
+	if(g_maxsize) {
+		if(g_pcap_size >= g_maxsize*1e6) { g_shutdown = 1; }
 	}
 }
 
@@ -93,11 +157,11 @@ int main(int argc, char *argv[])
 		(void) alarm(1);
 	}
 
-	z=0; // wait for the slow release of death
+	// wait for the slow release of death
 	while(!g_shutdown) {
-		if(z>999) { z=0; }
-		usleep(1000);
-		z++;
+		// We will check roughly 1000 times per second
+		check_for_stop_condition();
+		usleep(1000);	// NOT an exact timer
 	}
 
 	// Shutdown the ZMQ SUB bus
@@ -117,6 +181,9 @@ struct options opts[] = {
 	{ 3, "stats",	"Display stats on stderr", 			NULL, 0 },
 	{ 4, "us",		"Force Microsecond Timestamps",		NULL, 0 },
 	{ 5, "ns",		"Force Nanosecond Timestamps",		NULL, 0 },
+	{ 6, "maxtime",	"Stop after X seconds",				NULL, 1 },
+	{ 7, "maxpkts",	"Stop after X pkts",				NULL, 1 },
+	{ 8, "maxsize",	"Stop after X MB",					NULL, 1 },
 	{ 0, NULL,		NULL,								NULL, 0 }
 };
 
@@ -151,6 +218,15 @@ static void parse_args(int argc, char *argv[])
 				break;
 			case 5:
 				g_ns_ts = 1;
+				break;
+			case 6:
+				g_stoptime = time(NULL) + strtoul(args, NULL, 10);
+				break;
+			case 7:
+				g_maxpkts = strtoul(args, NULL, 10);
+				break;
+			case 8:
+				g_maxsize = strtoul(args, NULL, 10);
 				break;
 			default:
 				fprintf(stderr, "Unknown command line argument %i\n", c);

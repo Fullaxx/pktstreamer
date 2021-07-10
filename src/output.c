@@ -30,10 +30,12 @@ unsigned int g_magic = 0;
 
 // Externals found in pkt_recv.c
 extern unsigned int g_shutdown;
-extern unsigned long g_zmqerr_count;
-extern unsigned long g_zmqpkt_count;
 extern unsigned int g_us_ts;
 extern unsigned int g_ns_ts;
+extern unsigned long g_zmqerr_count;
+extern unsigned long g_zmqpkt_count;
+extern unsigned long g_pcap_count;
+extern unsigned long g_pcap_size;
 
 static void print_file_header(zmq_mf_t *fh_msg)
 {
@@ -122,6 +124,9 @@ static void print_packet(zmq_mf_t *ts_msg, zmq_mf_t *pkt_msg)
 		fprintf(stderr, "Error writing packet data!\n");
 		exit(1);
 	}
+
+	g_pcap_count++;
+	g_pcap_size += pkt_msg->size + 16;
 }
 
 /*

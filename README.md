@@ -80,6 +80,16 @@ or to print packets into wireshark/tshark/tcpdump.
 ./pkt_writer.exe -Z tcp://localhost:9999 --stats -P shiny_new.pcap
 ```
 
+## Define a stop condition
+Stop after 60 seconds \
+Stop after 10000 packets \
+Stop after 100 MB
+```
+./pkt_writer.exe -Z tcp://localhost:9999 -P shiny_new.pcap --stats --maxtime 60
+./pkt_writer.exe -Z tcp://localhost:9999 -P shiny_new.pcap --stats --maxpkts 10000
+./pkt_writer.exe -Z tcp://localhost:9999 -P shiny_new.pcap --stats --maxsize 100
+```
+
 ## Histogram example
 Use hist_ipp to collect a histogram of IP Protocols. \
 Use hist_tcp to collect a histogram of TCP port numbers. \
