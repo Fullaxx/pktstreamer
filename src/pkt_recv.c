@@ -56,7 +56,7 @@ void count_packet(unsigned int pkts, unsigned int bytes)
 {
 	g_pcap_count += pkts;
 	g_bw_count += pkts;
-	g_pcap_size += bytes;
+	g_pcap_size += bytes + 16;	//Add the packet header
 	g_bw_size += bytes;
 }
 
@@ -163,6 +163,9 @@ int main(int argc, char *argv[])
 
 	// Close the PCAP file if opened
 	fini_output();
+
+	printf("Total Packets: %lu\n", g_pcap_count);
+	printf("Total Bytes  : %lu\n", g_pcap_size + 24);	//Add the file header
 
 	if(g_zmqsockaddr)	{ free(g_zmqsockaddr); }
 	if(g_filename)		{ free(g_filename); }
