@@ -44,55 +44,49 @@ unsigned long g_zmqerr_count = 0;
 unsigned long g_zmqpkt_count = 0;
 unsigned long g_pcap_count = 0;
 unsigned long g_pcap_size = 0;
+unsigned long g_bw_count = 0;
+unsigned long g_bw_size = 0;
 
 // Stop Conditionals
 time_t g_stoptime = 0;
 unsigned long g_maxpkts = 0;
 unsigned long g_maxsize = 0;
 
+void count_packet(unsigned int pkts, unsigned int bytes)
+{
+	g_pcap_count += pkts;
+	g_bw_count += pkts;
+	g_pcap_size += bytes;
+	g_bw_size += bytes;
+}
+
 static void alarm_handler(int signum)
 {
-	char *size_units, *count_units;
-	unsigned long size, count;
+	char *bw_units;
+	unsigned long bw;
 
-	if(g_pcap_size >= 1000000000000) {
-		size_units = "TB";
-		size = g_pcap_size/1000000000000;
-	} else if(g_pcap_size >= 1000000000) {
-		size_units = "GB";
-		size = g_pcap_size/1000000000;
-	} else if(g_pcap_size >= 1000000) {
-		size_units = "MB";
-		size = g_pcap_size/1000000;
-	} else if(g_pcap_size >= 1000) {
-		size_units = "KB";
-		size = g_pcap_size/1000;
-	} else {
-		size_units = "B";
-		size = g_pcap_size;
-	}
+	bw = g_bw_size;
+	g_bw_size = 0;
 
-	if(g_pcap_count >= 1000000000000) {
-		count_units = "t";
-		count = g_pcap_count/1000000000000;
-	} else if(g_pcap_count >= 1000000000) {
-		count_units = "b";
-		count = g_pcap_count/1000000000;
-	} else if(g_pcap_count >= 1000000) {
-		count_units = "m";
-		count = g_pcap_count/1000000;
-	} else if(g_pcap_count >= 1000) {
-		count_units = "k";
-		count = g_pcap_count/1000;
+	if(bw >= 1000000000000) {
+		bw_units = "TB/s";
+		bw = bw/1000000000000;
+	} else if(bw >= 1000000000) {
+		bw_units = "GB/s";
+		bw = bw/1000000000;
+	} else if(bw >= 1000000) {
+		bw_units = "MB/s";
+		bw = bw/1000000;
+	} else if(bw >= 1000) {
+		bw_units = "KB/s";
+		bw = bw/1000;
 	} else {
-		count_units = "";
-		count = g_pcap_count;
+		bw_units = "B/s";
 	}
 
 	fprintf(stderr, "%lu/%lu", g_zmqerr_count, g_zmqpkt_count);
 	g_zmqpkt_count = g_zmqerr_count = 0;
-	fprintf(stderr, " [%lu%s]", size, size_units);
-	fprintf(stderr, " (%lu%s)", count, count_units);
+	fprintf(stderr, " [%lu%s]", bw, bw_units);
 	fprintf(stderr, "\n");
 	fflush(stderr);
 

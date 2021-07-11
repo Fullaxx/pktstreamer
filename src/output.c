@@ -23,6 +23,9 @@
 
 #include "async_zmq_sub.h"
 
+// Prototypes
+void count_packet(unsigned int pkts, unsigned int bytes);
+
 // Globals
 FILE *g_outstream = NULL;
 unsigned int g_file_header_written = 0;
@@ -34,8 +37,6 @@ extern unsigned int g_us_ts;
 extern unsigned int g_ns_ts;
 extern unsigned long g_zmqerr_count;
 extern unsigned long g_zmqpkt_count;
-extern unsigned long g_pcap_count;
-extern unsigned long g_pcap_size;
 
 static void print_file_header(zmq_mf_t *fh_msg)
 {
@@ -125,8 +126,7 @@ static void print_packet(zmq_mf_t *ts_msg, zmq_mf_t *pkt_msg)
 		exit(1);
 	}
 
-	g_pcap_count++;
-	g_pcap_size += pkt_msg->size + 16;
+	count_packet(1, pkt_msg->size);
 }
 
 /*
