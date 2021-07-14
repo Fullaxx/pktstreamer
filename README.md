@@ -49,13 +49,23 @@ iw dev wlan0 set channel 11
 ```
 
 ## Use a BPF to exclude unwanted packets
+Helpful Hints: [wiki.wireshark.org](https://wiki.wireshark.org/CaptureFilters) [hackertarget.com](https://hackertarget.com/tcpdump-examples/) [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-tcpdump.pdf)
 ```
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "ether[0] & 1 == 1"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "not broadcast and not multicast"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "dst host ff02::1"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f arp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip6
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp6
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f tcp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
-./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f dns
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "port 53"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] == tcp-syn"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] == tcp-syn|tcp-ack"
 ```
 
 ## Capturing packets on the ANY interface
