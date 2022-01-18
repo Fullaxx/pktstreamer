@@ -1,5 +1,5 @@
 /*
-	Copyright (C) 2021 Brett Kuskie <fullaxx@gmail.com>
+	Copyright (C) 2022 Brett Kuskie <fullaxx@gmail.com>
 
 	This program is free software; you can redistribute it and/or modify
 	it under the terms of the GNU General Public License as published by
@@ -21,10 +21,12 @@
 #include <unistd.h>
 #include <time.h>
 #include <signal.h>
+#include <errno.h>
+#include <netdb.h>			// gethostbyname()
 
 #include "getopts.h"
 #include "async_pcapture.h"
-#include "async_zmq_pub.h"
+#include "udp4.h"
 
 // Prototypes
 static void parse_args(int argc, char **argv);
@@ -33,11 +35,11 @@ static void parse_args(int argc, char **argv);
 int g_shutdown = 0;
 
 char *g_dev = NULL;
-char *g_zmqsockaddr = NULL;
+char *g_mcastaddr = NULL;
 char *g_filter = NULL;
 int g_verbosity = 0;
 
-zmq_pub_t *g_pktpub = NULL;
+u4clnt_t g_msock;
 unsigned long g_pkt_id = 0;
 
 static void sig_handler(int signum)
@@ -52,34 +54,47 @@ static void sig_handler(int signum)
 	}
 }
 
-/*
-	as_zmq_pub_send(g_pktpub, ac->dev, strlen(ac->dev)+1, 1);
-
-	snprintf(zbuf, sizeof(zbuf), "%d/%d/%u/%u", ac->linktype, 0, 0, 262144);
-	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
-
-	snprintf(zbuf, sizeof(zbuf), "%ld.%09ld", ts->tv_sec, ts->tv_usec);
-	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
-
-	as_zmq_pub_send(g_pktpub, buf, len, 0);
-*/
-static void publish_packet(acap_t *ac, unsigned char *buf, int len, struct timespec *ts)
+ssize_t as_udp4_client_write(u4clnt_t *c, void *data, int data_len)
 {
-	char zbuf[256];
+	ssize_t z;
 
-	// Drop the device on the ZMQ stream
-	as_zmq_pub_send(g_pktpub, ac->dev, strlen(ac->dev)+1, 1);
+	if(!c) { return 0; }
 
-	// Drop the File Header on the ZMQ stream
-	snprintf(zbuf, sizeof(zbuf), "%u/%d/%d/%u/%u", ac->magic, ac->linktype, 0, 0, 262144);
-	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
+	z = sendto(c->socket, data, data_len, 0, (SA *)&c->addr, sizeof(c->addr));
+	if(z < 0) {
+		fprintf(stderr, "error: sendto() [as_udp4_client_write()] (errno: %i)\n", errno);
+		perror("sendto");
+	}
 
-	// Drop the Packet Timestamp on the ZMQ stream
-	snprintf(zbuf, sizeof(zbuf), "%ld.%09ld", ts->tv_sec, ts->tv_nsec);
-	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
+	return z;
+}
 
-	// Drop the Packet Data on the ZMQ stream
-	as_zmq_pub_send(g_pktpub, buf, len, 0);
+int as_udp4_connect(u4clnt_t *c, char *address, unsigned short port)
+{
+	struct hostent *host = NULL;
+
+	c->socket = socket(PF_INET, SOCK_DGRAM, 0);
+	if(c->socket < 0) {
+		fprintf(stderr, "error: socket() [as_udp4_client_write()] (errno: %i)\n", errno);
+		perror("socket");
+		return -1;
+	}
+
+	// The gethostbyname*() and gethostbyaddr*() functions are obsolete.
+	// Applications should use  getaddrinfo(3) and getnameinfo(3) instead.
+	if (!(host = gethostbyname(address))) {
+		fprintf(stderr, "gethostbyname(): %s could not be resolved\n", address);
+		perror("gethostbyname");
+		return -2;
+	}
+
+	memset(&c->addr, 0, sizeof(c->addr));
+	c->addr.sin_family = AF_INET;
+	c->addr.sin_port = htons(port);
+	//c->addr.sin_addr = host->h_addr;
+	memcpy(&c->addr.sin_addr, host->h_addr, sizeof(c->addr.sin_addr));
+
+	return 0;
 }
 
 static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *raw_pkt)
@@ -94,7 +109,7 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 	}
 
 	g_pkt_id++;
-	publish_packet(ac, raw_pkt, pcap_hdr->caplen, &myts);
+	as_udp4_client_write(&g_msock, raw_pkt, pcap_hdr->caplen);
 
 	if(g_verbosity == 1) {
 		printf(".");
@@ -115,6 +130,7 @@ static void recv_packet(acap_t *ac, const struct pcap_pkthdr *pcap_hdr, u_char *
 int main(int argc, char *argv[])
 {
 	int retval;
+	char *colon;
 	acap_t ac;
 	acap_opt_t asopt;
 
@@ -126,10 +142,12 @@ int main(int argc, char *argv[])
 	// Parse Command Line Arguments
 	parse_args(argc, argv);
 
-	// Start the ZMQ Publisher
-	g_pktpub = as_zmq_pub_create(g_zmqsockaddr, 0, 0);
-	if(!g_pktpub) {
-		fprintf(stderr, "as_zmq_pub_create(%s) failed!\n", g_zmqsockaddr);
+	// Open the Multicast Socket
+	colon = strchr(g_mcastaddr, ':');
+	*colon = 0L;
+	retval = as_udp4_connect(&g_msock, g_mcastaddr, atoi(colon+1));
+	if(retval < 0) {
+		fprintf(stderr, "as_udp4_connect(%s:d%d) failed!\n", g_mcastaddr, atoi(colon+1));
 		return 1;
 	}
 
@@ -137,7 +155,6 @@ int main(int argc, char *argv[])
 	printf("Opening %s ...\n", (g_dev ? g_dev : "ANY"));
 	retval = as_pcapture_launch(&ac, &asopt, g_dev, g_filter, &recv_packet, NULL);
 	if(retval < 0) {
-		as_zmq_pub_destroy(g_pktpub);
 		fprintf(stderr, "as_pcapture_launch(%s) failed!!\n", g_dev);
 		return 2;
 	}
@@ -155,15 +172,9 @@ int main(int argc, char *argv[])
 	as_pcapture_stop(&ac);
 	if(g_verbosity == 1) { printf("\n"); }
 
-	// Shutdown the ZMQ PUB bus
-	if(g_pktpub) {
-		as_zmq_pub_destroy(g_pktpub);
-		g_pktpub = NULL;
-	}
-
-	if(g_dev)			{ free(g_dev); }
-	if(g_zmqsockaddr)	{ free(g_zmqsockaddr); }
-	if(g_filter)		{ free(g_filter); }
+	if(g_dev)		{ free(g_dev); }
+	if(g_mcastaddr)	{ free(g_mcastaddr); }
+	if(g_filter)	{ free(g_filter); }
 
 	if(g_verbosity > 0) {
 		printf("\nPackets Sent: %lu\n", g_pkt_id);
@@ -174,16 +185,16 @@ int main(int argc, char *argv[])
 
 struct options opts[] = 
 {
-	{ 1, "dev",			"Network device to sniff",		"i",  1 },
-	{ 2, "ZMQ",			"Set the ZMQ PUB",				"Z",  1 },
-	{ 3, "filter",		"Apply this filter",			"f",  1 },
-	{ 4, "verbosity",	"Set verbosity (-v 1 / -v 2)",	"v",  1 },
-	{ 0, NULL,			NULL,							NULL, 0 }
+	{ 1, "dev",			"Network device to sniff",			"i",  1 },
+	{ 2, "MCAST",		"Set the MCAST address (IP:PORT)",	"M",  1 },
+	{ 3, "filter",		"Apply this filter",				"f",  1 },
+	{ 4, "verbosity",	"Set verbosity (-v 1 / -v 2)",		"v",  1 },
+	{ 0, NULL,			NULL,								NULL, 0 }
 };
 
 static void parse_args(int argc, char **argv)
 {
-	char *args;
+	char *args, *colon;
 	int c;
 
 	while ((c = getopts(argc, argv, opts, &args)) != 0) {
@@ -201,7 +212,7 @@ static void parse_args(int argc, char **argv)
 				g_dev = strdup(args);
 				break;
 			case 2:
-				g_zmqsockaddr = strdup(args);
+				g_mcastaddr = strdup(args);
 				break;
 			case 3:
 				g_filter = strdup(args);
@@ -223,8 +234,24 @@ static void parse_args(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 
-	if(!g_zmqsockaddr) {
-		fprintf(stderr, "I need a ZMQ bus to drop packets onto! (Fix with -Z)\n");
+	if(!g_mcastaddr) {
+		fprintf(stderr, "I need a Multicast Address to drop packets onto! (Fix with -M)\n");
 		exit(EXIT_FAILURE);
+	}
+
+	colon = strchr(g_mcastaddr, ':');
+	if(!colon) {
+		fprintf(stderr, "Multicast Address must be in the form of \"<MCASTIP>:<1-65535> (Fix with -M)\"\n");
+		exit(1);
+	}
+
+	if(atoi(colon+1) == 0) {
+		fprintf(stderr, "Multicast Address must be in the form of \"<MCASTIP>:<1-65535> (Fix with -M)\"\n");
+		exit(1);
+	}
+
+	if(atoi(colon+1) > 65535) {
+		fprintf(stderr, "Multicast Address must be in the form of \"<MCASTIP>:<1-65535> (Fix with -M)\"\n");
+		exit(1);
 	}
 }

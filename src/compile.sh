@@ -15,6 +15,9 @@ rm -f *.exe *.dbg
 gcc ${OPTCFLAGS} test_printer.c -o test_printer.exe
 gcc ${DBGCFLAGS} test_printer.c -o test_printer.dbg
 
+gcc ${OPTCFLAGS} live2mcast.c ${BAKAPIDIR}/{getopts,async_pcapture}.c -lpthread -lpcap -o live2mcast.exe
+gcc ${DBGCFLAGS} live2mcast.c ${BAKAPIDIR}/{getopts,async_pcapture}.c -lpthread -lpcap -o live2mcast.dbg
+
 gcc ${OPTCFLAGS} live2zmq.c ${BAKAPIDIR}/{getopts,async_pcapture,async_zmq_pub}.c -lpthread -lpcap -lzmq -o live2zmq.exe
 gcc ${DBGCFLAGS} live2zmq.c ${BAKAPIDIR}/{getopts,async_pcapture,async_zmq_pub}.c -lpthread -lpcap -lzmq -o live2zmq.dbg
 
