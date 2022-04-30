@@ -1,5 +1,3 @@
-[![Build Status](https://travis-ci.com/Fullaxx/pktstreamer.svg?branch=master)](https://travis-ci.com/Fullaxx/pktstreamer)
-
 # pktstreamer
 Stream filtered network packets using ZeroMQ
 
