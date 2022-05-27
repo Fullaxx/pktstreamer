@@ -54,6 +54,8 @@ typedef struct {
 
 	int prefer_adapter_ts;
 	int prefer_nanosec_ts;
+
+	int direction;
 } acap_opt_t;
 
 int as_pcapture_launch(acap_t *, acap_opt_t *, char *, char *, void *, void *);

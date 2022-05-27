@@ -27,7 +27,7 @@
 
 #include "async_pcapture.h"
 
-static void inline idlehands(void)
+static inline void idlehands(void)
 {
 #ifdef YIELDFORSPEED
 	sched_yield();
@@ -79,6 +79,7 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 	int max_pkts = 0;
 	int prefer_adapter_ts = 0;
 	int prefer_nanosec_ts = 0;
+	int direction = 0;
 
 	if((!ac) || (!cb)) { return -1; }
 
@@ -89,6 +90,7 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 		max_pkts = opt->max_pkts;
 		prefer_adapter_ts = opt->prefer_adapter_ts;
 		prefer_nanosec_ts = opt->prefer_nanosec_ts;
+		direction = opt->direction;
 	}
 
 	memset(ac, 0, sizeof(acap_t));
@@ -164,7 +166,7 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 		} else {
 			fprintf(stderr, "pcap_activate(%s) failed: %d\n", ac->dev, err);
 		}
-		return -6;
+		return -7;
 	}
 
 	ac->linktype = pcap_datalink(ac->h);
@@ -175,34 +177,42 @@ int as_pcapture_launch(acap_t *ac, acap_opt_t *opt, char *dev, char *filter, voi
 		ac->magic = 0xA1B23C4D;
 	} else {
 		fprintf(stderr, "Could not determine magic value!\n");
-		return -7;
+		return -8;
+	}
+
+	if(direction > 0) {
+		err = pcap_setdirection(ac->h, direction);
+		if(err) {
+			fprintf(stderr, "pcap_setdirection(%d) failed: %d\n", direction, err);
+			return -6;
+		}
 	}
 
 	if(filter) {
 		if(pcap_compile(ac->h, &fp, filter, 1, PCAP_NETMASK_UNKNOWN) == -1) {
 			fprintf(stderr, "pcap_compile(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -8;
+			return -9;
 		}
 
 		if(pcap_setfilter(ac->h, &fp) == -1) {
 			fprintf(stderr, "pcap_setfilter(%s) failed: %s\n", filter, ac->pcap_errbuf);
-			return -9;
+			return -10;
 		}
 	}
 
 	if(pcap_setnonblock(ac->h, 1, ac->pcap_errbuf) == -1) {
 		fprintf(stderr, "pcap_setnonblock(%s) failed: %s\n", ac->dev, ac->pcap_errbuf);
-		return -10;
+		return -11;
 	}
 
 	if(pthread_create(&thr_id, NULL, &pcap_thread_watch, ac)) {
 		fprintf(stderr, "pthread_create() failed!\n");
-		return -11;
+		return -12;
 	}
 
 	if(pthread_detach(thr_id)) {
 		fprintf(stderr, "pthread_detach() failed!\n");
-		return -12;
+		return -13;
 	}
 
 	return 0;
