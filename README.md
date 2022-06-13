@@ -47,7 +47,7 @@ iw dev wlan0 set channel 11
 ```
 
 ## Use a BPF to exclude unwanted packets
-Helpful Hints: [www.tcpdump.org](https://www.tcpdump.org/manpages/pcap-filter.7.html) / [wiki.wireshark.org](https://wiki.wireshark.org/CaptureFilters) / [hackertarget.com](https://hackertarget.com/tcpdump-examples/) / [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-tcpdump.pdf)
+Helpful Hints: [tcpdump.org](https://www.tcpdump.org/manpages/pcap-filter.7.html) / [wireshark.org](https://wiki.wireshark.org/CaptureFilters) / [hackertarget.com](https://hackertarget.com/tcpdump-examples/) / [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-tcpdump.pdf)
 ```
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "ether[0] & 1 == 1"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "not broadcast and not multicast"
