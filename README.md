@@ -47,26 +47,32 @@ iw dev wlan0 set channel 11
 ```
 
 ## Use a BPF to exclude unwanted packets
-Helpful Hints: [tcpdump.org](https://www.tcpdump.org/manpages/pcap-filter.7.html) / [wireshark.org](https://wiki.wireshark.org/CaptureFilters) / [hackertarget.com](https://hackertarget.com/tcpdump-examples/) / [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-tcpdump.pdf)
+HTML Resources: [tcpdump.org](https://www.tcpdump.org/manpages/pcap-filter.7.html) / [wireshark.org](https://wiki.wireshark.org/CaptureFilters) / [hackertarget.com](https://hackertarget.com/tcpdump-examples/) / [biot.com](https://biot.com/capstats/bpf.html) / [ntop.org](https://www.ntop.org/guides/nprobe/bpf_expressions.html) \
+PDF Cheat Sheets: [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-tcpdump.pdf) / [gigamon.com](https://www.gigamon.com/content/dam/resource-library/english/guide---cookbook/gu-bpf-reference-guide-gigamon-insight.pdf) / [infosecwriters.com](https://www.infosecwriters.com/text_resources/pdf/JStebelton_BPF.pdf)
 ```
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "greater 1480"
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "less 40"
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "ether[0] & 1 == 1"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "not broadcast and not multicast"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "dst host ff02::1"
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "ether dst ff:ff:ff:ff:ff:ff"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f arp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f llc
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip6
-./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "host 10.1.1.5"
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "host 75.75.75.75"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp6
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
-./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f tcp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f udp
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f sctp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp port 443"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "port 53"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] == tcp-syn"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] == tcp-syn|tcp-ack"
-./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f sctp
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] & (tcp-syn|tcp-fin) != 0"
+./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f "tcp[tcpflags] & (tcp-rst|tcp-ack) == (tcp-rst|tcp-ack)"
 ```
 
 ## Capturing packets on the ANY interface
