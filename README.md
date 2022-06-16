@@ -1,4 +1,4 @@
-# pktstreamer
+# Packet Streamer [![Actions Status](https://github.com/Fullaxx/pktstreamer/workflows/CI/badge.svg)](https://github.com/Fullaxx/pktstreamer/actions)
 Stream filtered network packets using ZeroMQ
 
 ## Requirements for building
