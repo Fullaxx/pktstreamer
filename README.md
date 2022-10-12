@@ -61,6 +61,7 @@ PDF Cheat Sheets: [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f ip6
 ./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "host 75.75.75.75"
+./live2zmq.exe -v 1 -i eth0 -Z tcp://*:9999 -f "ip[8] < 128"
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f icmp6
 ./live2zmq.exe -v 2 -i eth0 -Z tcp://*:9999 -f igmp
@@ -78,7 +79,7 @@ PDF Cheat Sheets: [alumni.cs.ucr.edu](http://alumni.cs.ucr.edu/~marios/ethereal-
 ## Capturing packets on the ANY interface
 You can use live2zmq to capture on the ANY interface by omitting the dev argument.
 In this case you must implement a filter that excludes the ZMQ stream itself.
-If you don't every ZMQ message will generate at least one packet, which will get captured by libpcap and then passed to ZMQ.
+If you don't, every ZMQ message will generate at least one packet, which will get captured by libpcap and then passed to ZMQ.
 This in turn will create a rift in the space-time continuum that will destroy all life on Earth.
 You have been warned.
 ```
