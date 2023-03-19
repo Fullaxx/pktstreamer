@@ -108,6 +108,13 @@ Stop after 100 MB
 ./pkt_writer.exe -Z tcp://localhost:9999 -P shiny_new.pcap --stats --maxsize 100
 ```
 
+## Analysis example
+Use analysis_example to dissect ICMP and TCP packets. \
+It will display pings and new TCP connections.
+```
+./analysis_example.exe -Z tcp://localhost:9999
+```
+
 ## Histogram example
 Use hist_ipp to collect a histogram of IP Protocols. \
 Use hist_tcp to collect a histogram of TCP port numbers. \
