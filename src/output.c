@@ -132,7 +132,7 @@ static void print_packet(zmq_mf_t *ts_msg, zmq_mf_t *pkt_msg)
 /*
 	as_zmq_pub_send(g_pktpub, ac->dev, strlen(ac->dev)+1, 1);
 
-	snprintf(zbuf, sizeof(zbuf), "%d/%d/%u/%u", ac->linktype, 0, 0, 262144);
+	snprintf(zbuf, sizeof(zbuf), "%u/%d/%d/%u/%u", ac->magic, ac->linktype, 0, 0, 262144);
 	as_zmq_pub_send(g_pktpub, zbuf, strlen(zbuf)+1, 1);
 
 	snprintf(zbuf, sizeof(zbuf), "%ld.%09ld", ts->tv_sec, ts->tv_usec);
